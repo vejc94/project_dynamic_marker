@@ -8,6 +8,7 @@
 void squarePacking(cv::Mat image, double radius);
 void hexagonalPacking(cv::Mat image, double radius);
 void squarePackingContinous(cv::Mat image, double radius);
+void hexagonalPackingContinous(cv::Mat image, double radius);
 std::vector<cv::Point> getCentersHX();
 std::vector<cv::Point> getCentersSQ();
 #endif // CIRCLEPACKING_H

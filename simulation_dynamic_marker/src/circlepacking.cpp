@@ -49,29 +49,17 @@ void squarePacking(Mat image, double radius){
 
 void hexagonalPacking(Mat image, double radius){
     image.setTo(0);
-    int m = mon_rows /(sqrt(3.2) * radius); //number of circles in the rows
+    int m = mon_rows /(sqrt(3.3) * radius); //number of circles in the rows
     int n = mon_cols /(2 * radius); //number of circle in the columns
-    static int n_old = n;
-    static int m_old = m;
+//    static int n_old = n;
+//    static int m_old = m;
 
-    if((n_old != n)||(m_old != m)||centers_hx.empty()){
+/*    if((n_old != n)||(m_old != m)||centers_hx.empty()){
         n_old = n;
         m_old = m;
+        */
         centers_hx.clear();
-//        for(int i = 0; i < n; i++){// columns
-//            for(int j = 0; j < m; j++){//rows
-//                if(j % 2 != 0 ){
-//                    if(n-i==1) continue;
-//                    centers_hx.push_back(Point(2*(i+1)*mon_cols/(n*2), (1+j*sqrt(3))*mon_rows/(m*sqrt(3.3))));
-//                    //centers_hx.push_back(Point(2*(i+1)*radius, (1+j*sqrt(3))*radius));
-//                }
-//                else{
-//                    centers_hx.push_back(Point((2*i+1)*mon_cols/(2*n),(1+j*sqrt(3))*mon_rows/(sqrt(3.3)*m)));
-//                    //centers_hx.push_back(Point((2*i+1)*radius,(1+j*sqrt(3))*radius));
-//                }
 
-//            }
-//        }
         for(int i = 0; i < m; i++){//rows
             for(int j = 0; j < n; j++){//columns
                 if(i % 2 !=0){
@@ -83,7 +71,7 @@ void hexagonalPacking(Mat image, double radius){
                 }
             }
         }
-    }
+    //}
     for(uint i=0; i<centers_hx.size(); i++){
         if(i<n) circle(image, centers_hx.at(i), (int)radius-15, Scalar(0,0,255), -1);
         else circle(image, centers_hx.at(i), (int)radius-15, Scalar(255,255,255), -1);
@@ -208,6 +196,48 @@ void squarePackingContinous(Mat image, double radius){
             }
         }
     }
+}
+
+void hexagonalPackingContinous(cv::Mat image, double radius){
+    image.setTo(0);
+    centers_hx.clear();
+    centers_hx.push_back(Point(mon_cols/2,mon_rows/2));
+
+    double t; // parameter for curve
+    double lamda = 1; //scaling factor;
+
+    for(t=0;t<radius;t=t+radius){
+        //first curve [R + t, sqrt(3)*(t - R)];
+        double x1 = radius + t + mon_cols/2;
+        double y1 = sqrt(3)*(t - radius) + mon_rows/2;
+        //mirrored points
+        double x1_m = 2*mon_cols/2 - x1;
+        double y1_m = 2*mon_rows/2 - y1;
+        //pushing points
+        centers_hx.push_back(Point(x1,y1));
+        centers_hx.push_back(Point(x1_m,y1_m));
+
+    }
+
+    for(t=0;t<=radius;t=t+radius){
+        //second curve [2R - t, sqrt(3)*t];
+        double x2 = 2*radius - t + mon_cols/2;
+        double y2 = sqrt(3)*t + mon_rows/2;
+        //mirrored points
+        double x2_m = 2*mon_cols/2 - x2;
+        double y2_m = 2*mon_rows/2 - y2;
+        //pushing points
+        centers_hx.push_back(Point(x2,y2));
+        centers_hx.push_back(Point(x2_m,y2_m));
+
+
+    }
+
+    for(int i = 0; i < centers_hx.size(); i++){
+        circle(image,centers_hx.at(i), radius-10, Scalar(255,255,255), -1);
+    }
+
+
 }
 
 std::vector<Point> getCentersHX(){

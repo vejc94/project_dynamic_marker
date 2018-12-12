@@ -80,7 +80,7 @@ int main()
 
     vpCameraParameters cam(1083, 1083, Icamera.getWidth()/2, Icamera.getHeight()/2);
 
-    vpHomogeneousMatrix cMw(-0.0, 0, 2, vpMath::rad(0), vpMath::rad(0), vpMath::rad(0)); //  camera coordinates to world(image) coordinates
+    vpHomogeneousMatrix cMw(-0.0, 0, 1.2, vpMath::rad(0), vpMath::rad(0), vpMath::rad(0)); //  camera coordinates to world(image) coordinates
 
     vpVirtualGrabber g(Iimage, cam); // Initialize image simulator
     g.acquire(Icamera,cMw,Iimage);//acquire image projection with camera position wrt world coordinates
@@ -100,10 +100,10 @@ int main()
     robot.setMaxRotationVelocity(vpMath::rad(90));
     vpColVector v(6);
 
-    v[2]=  0.75; // vz = 0.5 m/s
+    v[2]=  0.5; // vz = 0.5 m/s
 
     std::vector<cv::RotatedRect> det_ellipses;
-    circleController controller(540,5);
+    circleController controller(192,5);
 
     for(int i=0;;i++){
         robot.setVelocity(vpRobot::CAMERA_FRAME,v);
@@ -122,14 +122,14 @@ int main()
             continue;
         }
 
-        double Radius = controller.calculate(cMw, 70);//r_soll = 80 pixels
+        double Radius = controller.calculate(cMw, 50);//r_soll = 80 pixels
 
         if(Radius>192){
             squarePackingContinous(image_cv,Radius);
             projectionError(det_ellipses,wMc,cam,0);
         }
         else {
-            hexagonalPacking(image_cv, Radius);
+            hexagonalPackingContinous(image_cv, Radius);
             projectionError(det_ellipses,wMc,cam,1);
         }
 
@@ -139,6 +139,7 @@ int main()
 
         cv::namedWindow("monitor",cv::WINDOW_NORMAL);
         cv::imshow("monitor", image_cv);
+        //if(i>10)cv::imwrite("imagen.png", image_cv);
         cv::waitKey(1);
 
 
