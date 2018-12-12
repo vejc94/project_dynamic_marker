@@ -139,7 +139,7 @@ int main()
 
         cv::namedWindow("monitor",cv::WINDOW_NORMAL);
         cv::imshow("monitor", image_cv);
-        //if(i>10)cv::imwrite("imagen.png", image_cv);
+
         cv::waitKey(1);
 
 

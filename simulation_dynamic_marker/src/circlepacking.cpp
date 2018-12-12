@@ -204,40 +204,44 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
     centers_hx.push_back(Point(mon_cols/2,mon_rows/2));
 
     double t; // parameter for curve
-    double lamda = 1; //scaling factor;
 
-    for(t=0;t<radius;t=t+radius){
-        //first curve [R + t, sqrt(3)*(t - R)];
-        double x1 = radius + t + mon_cols/2;
-        double y1 = sqrt(3)*(t - radius) + mon_rows/2;
-        //mirrored points
-        double x1_m = 2*mon_cols/2 - x1;
-        double y1_m = 2*mon_rows/2 - y1;
-        //pushing points
-        centers_hx.push_back(Point(x1,y1));
-        centers_hx.push_back(Point(x1_m,y1_m));
+    //scaling factor lamda;
+    for(int lamda = 1;lamda<4;lamda*=2){
+        for(t=0;t<radius;t+=radius/lamda){
+            //first curve [R + t, sqrt(3)*(t - R)];
+            double x1 = lamda*(radius + t) + mon_cols/2;
+            double y1 = lamda*(sqrt(3)*(t - radius)) + mon_rows/2;
+            //mirrored points
+            double x1_m = 2*mon_cols/2 - x1;
+            double y1_m = 2*mon_rows/2 - y1;
+            //pushing points
+            centers_hx.push_back(Point(x1,y1));
+            centers_hx.push_back(Point(x1_m,y1_m));
+        }
+    }
+    //scaling factor lamda;
+    for(int lamda = 1;lamda<4;lamda*=2){
+        for(t=0;t<=radius;t=t+radius/lamda){
+            //second curve [2R - t, sqrt(3)*t];
+            double x2 = lamda*(2*radius - t) + mon_cols/2;
+            double y2 = lamda*(sqrt(3)*t) + mon_rows/2;
+            //mirrored points
+            double x2_m = 2*mon_cols/2 - x2;
+            double y2_m = 2*mon_rows/2 - y2;
+            //pushing points
+            centers_hx.push_back(Point(x2,y2));
+            centers_hx.push_back(Point(x2_m,y2_m));
 
+
+        }
     }
 
-    for(t=0;t<=radius;t=t+radius){
-        //second curve [2R - t, sqrt(3)*t];
-        double x2 = 2*radius - t + mon_cols/2;
-        double y2 = sqrt(3)*t + mon_rows/2;
-        //mirrored points
-        double x2_m = 2*mon_cols/2 - x2;
-        double y2_m = 2*mon_rows/2 - y2;
-        //pushing points
-        centers_hx.push_back(Point(x2,y2));
-        centers_hx.push_back(Point(x2_m,y2_m));
-
-
-    }
 
     for(int i = 0; i < centers_hx.size(); i++){
         circle(image,centers_hx.at(i), radius-10, Scalar(255,255,255), -1);
     }
 
-
+ cv::imwrite("imagen.png", image);
 }
 
 std::vector<Point> getCentersHX(){
