@@ -203,45 +203,63 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
     centers_hx.clear();
     centers_hx.push_back(Point(mon_cols/2,mon_rows/2));
 
+    int a = mon_rows/(sqrt(3)*radius);//number of circles in rows
+    int b = mon_cols /(2 * radius);//number of circles in columns
+
     double t; // parameter for curve
 
     //scaling factor lamda;
-    for(int lamda = 1;lamda<4;lamda*=2){
-        for(t=0;t<radius;t+=radius/lamda){
+    for(int lamda = 1;lamda<a;lamda++){
+        for(t=0;t<radius;t=t+radius/lamda){
             //first curve [R + t, sqrt(3)*(t - R)];
             double x1 = lamda*(radius + t) + mon_cols/2;
             double y1 = lamda*(sqrt(3)*(t - radius)) + mon_rows/2;
-            //mirrored points
-            double x1_m = 2*mon_cols/2 - x1;
-            double y1_m = 2*mon_rows/2 - y1;
+            //mirrored point
+            double x1_m = mon_cols - x1;
+
             //pushing points
             centers_hx.push_back(Point(x1,y1));
-            centers_hx.push_back(Point(x1_m,y1_m));
+            centers_hx.push_back(Point(x1_m,y1));
         }
     }
     //scaling factor lamda;
-    for(int lamda = 1;lamda<4;lamda*=2){
+    for(int lamda = 1;lamda<a;lamda++){
         for(t=0;t<=radius;t=t+radius/lamda){
             //second curve [2R - t, sqrt(3)*t];
             double x2 = lamda*(2*radius - t) + mon_cols/2;
-            double y2 = lamda*(sqrt(3)*t) + mon_rows/2;
-            //mirrored points
-            double x2_m = 2*mon_cols/2 - x2;
-            double y2_m = 2*mon_rows/2 - y2;
+            double y2 = lamda*(sqrt(3))*(t) + mon_rows/2;
+            //mirrored point
+            double x2_m = mon_cols - x2;
+
             //pushing points
             centers_hx.push_back(Point(x2,y2));
-            centers_hx.push_back(Point(x2_m,y2_m));
+            centers_hx.push_back(Point(x2_m,y2));
 
 
         }
     }
 
+    //scaling factor lamda;
+    for(int lamda = 2;lamda<a;lamda++){
+        for(t=2*radius/lamda;t<2*radius;t=t+2*radius/lamda){
+           //third curve [ R - t, sqrt(3)*R];
+            double x3 = lamda*(radius - t) + mon_cols/2;
+            double y3 = lamda*(sqrt(3)*radius) + mon_rows/2;
+            //mirrored points;
+            //double x3_m = mon_cols - x3;
+            double y3_m = mon_rows - y3;
+            //pushing points
+            centers_hx.push_back(Point(x3,y3));
+            centers_hx.push_back(Point(x3,y3_m));
+        }
+    }
 
-    for(int i = 0; i < centers_hx.size(); i++){
+
+    for(uint i = 0; i < centers_hx.size(); i++){
         circle(image,centers_hx.at(i), radius-10, Scalar(255,255,255), -1);
     }
 
- cv::imwrite("imagen.png", image);
+ cv::imwrite("imagen1.png", image);
 }
 
 std::vector<Point> getCentersHX(){
