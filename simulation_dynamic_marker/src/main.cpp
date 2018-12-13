@@ -80,7 +80,7 @@ int main()
 
     vpCameraParameters cam(1083, 1083, Icamera.getWidth()/2, Icamera.getHeight()/2);
 
-    vpHomogeneousMatrix cMw(-0.0, 0, 1.2, vpMath::rad(0), vpMath::rad(0), vpMath::rad(0)); //  camera coordinates to world(image) coordinates
+    vpHomogeneousMatrix cMw(-0.0, 0, 0.7, vpMath::rad(0), vpMath::rad(0), vpMath::rad(0)); //  camera coordinates to world(image) coordinates
 
     vpVirtualGrabber g(Iimage, cam); // Initialize image simulator
     g.acquire(Icamera,cMw,Iimage);//acquire image projection with camera position wrt world coordinates
