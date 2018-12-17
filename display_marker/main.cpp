@@ -14,7 +14,7 @@
 #include <QOpenGLPaintDevice>
 #include <QOpenGLTexture>
 
-int mon_rows = 1200;
+int mon_rows = 1080;
 int mon_cols = 1920;
 std::vector<cv::Point> centers_sq;
 std::vector<cv::Point> centers_hx;
@@ -23,6 +23,7 @@ std::vector<cv::Point> centers_hx;
 QImage loadTexture2(char *filename, GLuint &textureID);
 void hexagonalPacking(double radius);
 void squarePackingContinous(double radius);
+void hexagonalPackingContinous(double radius);
 std::vector<cv::Point> getCentersHX();
 std::vector<cv::Point> getCentersSQ();
 
@@ -110,36 +111,37 @@ void ImageDisplayWindow::render(){
     // to draw a single circle in a given coordinate
     // you can call this function inside your own circle packing functions
 
-    static double inc = 540;
-    if(inc > 192) squarePackingContinous(inc);
-    else hexagonalPacking(inc);
-    inc = inc -0.5;
+    static double inc = 190;
+    hexagonalPackingContinous(inc);
+//    if(inc > 192) squarePackingContinous(inc);
+//    else hexagonalPacking(inc);
+    inc = inc - 0.25;
 }
 void hexagonalPacking(double radius){
     cv::Mat image(mon_rows, mon_cols, CV_8UC3);
     image.setTo(0);
     int m = mon_rows /(sqrt(3.2) * radius); //number of circles in the rows
     int n = mon_cols /(2 * radius); //number of circle in the columns
-    static int n_old = n;
-    static int m_old = m;
+    //static int n_old = n;
+    //static int m_old = m;
 
-    if((n_old != n)||(m_old != m)||centers_hx.empty()){
-        n_old = n;
-        m_old = m;
+    //if((n_old != n)||(m_old != m)||centers_hx.empty()){
+        //n_old = n;
+        //m_old = m;
         centers_hx.clear();
 
         for(int i = 0; i < m; i++){//rows
             for(int j = 0; j < n; j++){//columns
                 if(i % 2 !=0){
                     if(n-j==1)continue;
-                    centers_hx.push_back(cv::Point(2*(j+1)*mon_cols/(n*2), (1+i*sqrt(3))*mon_rows/(m*sqrt(3.3))));
+                    centers_hx.push_back(cv::Point(2*(j+1)*radius, (1+i*sqrt(3))*(radius)));
                 }
                 else{
-                   centers_hx.push_back(cv::Point((2*j+1)*mon_cols/(2*n),(1+i*sqrt(3))*mon_rows/(sqrt(3.3)*m)));
+                   centers_hx.push_back(cv::Point((2*j+1)*radius,(1+i*sqrt(3))*(radius)));
                 }
             }
         }
-    }
+    //}
     for(uint i=0; i<centers_hx.size(); i++){
         if(i==0){
             drawCircle(centers_hx.at(i).x, centers_hx.at(i).y, radius - 10, 0.0f, 1.0f, 0.0f);
@@ -291,6 +293,114 @@ void squarePackingContinous(double radius){
         }
 
     }
+}
+
+void hexagonalPackingContinous(double radius){
+
+    centers_hx.clear();
+    centers_hx.push_back(Point(mon_cols/2,mon_rows/2));
+
+    int a = mon_rows/(sqrt(3)*radius);//number of circles in rows
+    int b = mon_cols /(2 * radius);//number of circles in columns
+
+    double t; // parameter for curve
+
+    //scaling factor lamda;
+    for(int lamda = 1;lamda<b;lamda++){
+        for(t=0;t<radius;t=t+radius/lamda){
+            //first curve [R + t, sqrt(3)*(t - R)];
+            double x1 = lamda*(radius + t) + mon_cols/2;
+            double y1 = lamda*(sqrt(3)*(t - radius)) + mon_rows/2;
+
+
+            //pushing points
+            if((x1<0)||(x1>mon_cols)||(y1<0||y1>mon_rows)){//checking if center fits in the monitor
+               continue;
+        }
+            //mirrored point
+            double x1_m = mon_cols - x1;
+
+            centers_hx.push_back(Point(x1,y1));
+            centers_hx.push_back(Point(x1_m,y1));
+        }
+    }
+    //scaling factor lamda;
+    for(int lamda = 1;lamda<b;lamda++){
+        for(t=0;t<=radius;t=t+radius/lamda){
+            //second curve [2R - t, sqrt(3)*t];
+            double x2 = lamda*(2*radius - t) + mon_cols/2;
+            double y2 = lamda*(sqrt(3))*(t) + mon_rows/2;
+            //mirrored point
+            double x2_m = mon_cols - x2;
+
+            //pushing points
+            if((x2<0)||(x2>mon_cols)||(y2<0||y2>mon_rows))//checking if center fits in the monitor
+                continue;
+            centers_hx.push_back(Point(x2,y2));
+            centers_hx.push_back(Point(x2_m,y2));
+
+
+        }
+    }
+
+    //scaling factor lamda;
+    for(int lamda = 2;lamda<b;lamda++){
+        for(t=2*radius/lamda;t<2*radius;t=t+2*radius/lamda){
+           //third curve [ R - t, sqrt(3)*R];
+            double x3 = lamda*(radius - t) + mon_cols/2;
+            double y3 = lamda*(sqrt(3)*radius) + mon_rows/2;
+            //mirrored points;
+            //double x3_m = mon_cols - x3;
+            double y3_m = mon_rows - y3;
+            //pushing points
+            if((x3<0)||(x3>mon_cols)||(y3<0||y3>mon_rows))//checking if center fits in the monitor
+                continue;
+            centers_hx.push_back(Point(x3,y3));
+            centers_hx.push_back(Point(x3,y3_m));
+        }
+    }
+
+
+    for(uint i = 0; i < centers_hx.size(); i++){
+        ///Checking if the circles with coordinates x, y fits in the display
+        /// if not draw circle with an smaller radius.
+        if((centers_hx.at(i).x - radius < 0)||(centers_hx.at(i).y - radius < 0)||(centers_hx.at(i).x + radius > mon_cols)||(centers_hx.at(i).y + radius > mon_rows)){
+            if(centers_hx.at(i).y - radius <0){
+                //centers_hx.at(i).y = (centers_hx.at(i).y + radius)/2;
+
+                double r_small = centers_hx.at(i).y;
+                drawCircle(centers_hx.at(i).x, centers_hx.at(i).y, r_small - r_small/5, 255, 255, 255);
+                //circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
+            }
+            else if(centers_hx.at(i).y + radius > mon_rows){
+
+                double r_small = mon_rows - centers_hx.at(i).y;
+                drawCircle(centers_hx.at(i).x, centers_hx.at(i).y, r_small - r_small/5, 255, 255, 255);
+                //circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
+            }
+            else if(centers_hx.at(i).x - radius <0){
+//                centers_hx.at(i).x = (centers_hx.at(i).x + radius)/2;
+                double r_small = centers_hx.at(i).x;
+                drawCircle(centers_hx.at(i).x, centers_hx.at(i).y, r_small - r_small/5, 255, 255, 255);
+                //circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
+            }
+
+
+            else if(centers_hx.at(i).x + radius > mon_cols){
+
+                double r_small = mon_cols - centers_hx.at(i).x;
+                drawCircle(centers_hx.at(i).x, centers_hx.at(i).y, r_small - r_small/5, 255, 255, 255);
+                //circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
+            }
+
+        }
+
+        else{
+            drawCircle(centers_hx.at(i).x, centers_hx.at(i).y, radius-10, 255,255,255);
+            //circle(image,centers_hx.at(i), radius-10, Scalar(255,255,255), -1);
+        }
+    }
+
 }
 
 std::vector<cv::Point> getCentersHX(){
