@@ -58,14 +58,21 @@ private:
     vpImageSimulator sim_ ;
 };
 
+
+//detection of the ellipses
+std::vector<cv::RotatedRect> centerDetector(vpImage<vpRGBa> &I);
+
+//error calculation of the dynamic marker
+void projectionError(std::vector<cv::RotatedRect>& list_ell, vpHomogeneousMatrix& wMc, vpCameraParameters cam, int packing);
+
+//simulation of the aruco marker and error calculation
+void arucoSimulation();
+void arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vector<cv::Vec3d> tvecs, cv::Mat cam_pam, float marker_length, std::vector<std::vector<cv::Point2f>> markerCorners, vpHomogeneousMatrix& wMc);
+
+//for sorting the list of the detected ellipses and the created ellipses
+bool contourAreaComparator(std::vector<cv::Point> contour1, std::vector<cv::Point> contour2);
 bool centerListComparator1(cv::Point point1, cv::Point point2);
 bool centerListComparator2(cv::Point point1, cv::Point point2);
-bool contourAreaComparator(std::vector<cv::Point> contour1, std::vector<cv::Point> contour2);
-std::vector<cv::RotatedRect> centerDetector(vpImage<vpRGBa> &I);
-void projectionError(std::vector<cv::RotatedRect>& list_ell, vpHomogeneousMatrix& wMc, vpCameraParameters cam, int packing);
-void crossRatioCalculator(std::vector<cv::RotatedRect>& list_ell);
-void arucoSimulation();
-
 
 int main()
 {
@@ -326,7 +333,10 @@ void arucoSimulation(){
     cv::Mat marker_image_rgb;///RGBa needed for visp Images. visp doesn't support vpImage<BGR> constructors!
 
     cv::cvtColor(marker_image_cv,marker_image_rgb,CV_GRAY2RGB);
-
+    //for pose estimation
+    cv::Mat distCoeff;
+    std::vector<cv::Vec3d> rvecs, tvecs;
+    float marker_length = 1440*0.00018;
 
 
 
@@ -373,6 +383,9 @@ void arucoSimulation(){
         //detection of the aruco image in the camera
         cv::aruco::detectMarkers(icamera_cv, dictionary, markerCorners, markerIds, parameters, rejectedCandidates,cam_cv);
         cv::aruco::drawDetectedMarkers(icamera_cv, markerCorners, markerIds);
+
+        //estimate pose
+        arucoPoseError(distCoeff, rvecs, tvecs, cam_cv, marker_length, markerCorners, wMc);
         cv::imshow("image de la camara", icamera_cv);
         cv::waitKey(1);
         vpImageConvert::convert(icamera_cv, Icamera);
@@ -382,7 +395,18 @@ void arucoSimulation(){
     }
 }
 
+void arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vector<cv::Vec3d> tvecs, cv::Mat cam_pam, float marker_length, std::vector<std::vector<cv::Point2f>> markerCorners, vpHomogeneousMatrix &wMc){
+    //rotation matrix of the rotation vector
+    cv::Mat Rmat;
+    cv::aruco::estimatePoseSingleMarkers(markerCorners, marker_length, cam_pam, distCoeff, rvecs, tvecs);
+    cv::Vec3d tvec = tvecs[0];
 
+    //cv::Rodrigues(rvecs.at(0),Rmat);
+
+    //error of the z component of the translation vector
+    std::cout << tvec[2] - wMc.inverse().getTranslationVector()[2] << std::endl;
+
+}
 //sort contours in descending order of area.
 bool contourAreaComparator(std::vector<cv::Point> contour1, std::vector<cv::Point> contour2){
     double i = fabs( cv::contourArea(contour1));
