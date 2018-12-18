@@ -1,6 +1,7 @@
 //OpenCV
 #include <opencv2/opencv.hpp>
-
+#include <opencv2/aruco.hpp>
+#include <opencv2/core/cvstd.hpp>
 //ViSP
 #include <visp/vpImageIo.h>
 #include <visp/vpImageSimulator.h>
@@ -22,10 +23,17 @@ public:
         ///Display size 345mm X 194mm
         for (int i = 0; i < 4; i++)
             X[i].resize(3);
+        // Parameters for dynamic marker
         //Top left          Top right           Bottom right       Bottom left
-        X[0][0] = -0.1725;  X[1][0] =  0.1725;  X[2][0] = 0.1725;  X[3][0] = -0.1725;
-        X[0][1] = -0.097;   X[1][1] = -0.097;   X[2][1] = 0.097;   X[3][1] =  0.097;
+//        X[0][0] = -0.1725;  X[1][0] =  0.1725;  X[2][0] = 0.1725;  X[3][0] = -0.1725;
+//        X[0][1] = -0.097;   X[1][1] = -0.097;   X[2][1] = 0.097;   X[3][1] =  0.097;
+//        X[0][2] =  0;       X[1][2] =  0;       X[2][2] = 0;       X[3][2] =  0;
+        //Parameters for aruco marker
+//        //Top left          Top right           Bottom right       Bottom left
+        X[0][0] = -0.1296;  X[1][0] =  0.1296;  X[2][0] = 0.1296;  X[3][0] = -0.1296;
+        X[0][1] = -0.1296;  X[1][1] = -0.1296;  X[2][1] = 0.1296;  X[3][1] =  0.1296;
         X[0][2] =  0;       X[1][2] =  0;       X[2][2] = 0;       X[3][2] =  0;
+
 
         target_=target;
 
@@ -56,11 +64,12 @@ bool contourAreaComparator(std::vector<cv::Point> contour1, std::vector<cv::Poin
 std::vector<cv::RotatedRect> centerDetector(vpImage<vpRGBa> &I);
 void projectionError(std::vector<cv::RotatedRect>& list_ell, vpHomogeneousMatrix& wMc, vpCameraParameters cam, int packing);
 void crossRatioCalculator(std::vector<cv::RotatedRect>& list_ell);
+void arucoSimulation();
 
 
 int main()
 {
-
+    arucoSimulation();
 
     ///create initializing image
     double init_radius = 200; //radius in pixels
@@ -80,7 +89,7 @@ int main()
 
     vpCameraParameters cam(1083, 1083, Icamera.getWidth()/2, Icamera.getHeight()/2);
 
-    vpHomogeneousMatrix cMw(-0.0, 0, 0.7, vpMath::rad(0), vpMath::rad(0), vpMath::rad(0)); //  camera coordinates to world(image) coordinates
+    vpHomogeneousMatrix cMw(-0.0, 0, 0.8, vpMath::rad(0), vpMath::rad(0), vpMath::rad(0)); //  camera coordinates to world(image) coordinates
 
     vpVirtualGrabber g(Iimage, cam); // Initialize image simulator
     g.acquire(Icamera,cMw,Iimage);//acquire image projection with camera position wrt world coordinates
@@ -124,14 +133,14 @@ int main()
 
         double Radius = controller.calculate(cMw, 50);//r_soll = 80 pixels
 
-        if(Radius>192){
-            squarePackingContinous(image_cv,Radius);
-            projectionError(det_ellipses,wMc,cam,0);
-        }
-        else {
+        //if(Radius>192){
+          //  squarePackingContinous(image_cv,Radius);
+            //projectionError(det_ellipses,wMc,cam,0);
+        //}
+        //else {
             hexagonalPackingContinous(image_cv, Radius);
             projectionError(det_ellipses,wMc,cam,1);
-        }
+        //}
 
 
 
@@ -306,8 +315,71 @@ void projectionError(std::vector<cv::RotatedRect>& list_ell,vpHomogeneousMatrix&
     //    fs.release();
 }
 
-void crossRatioCalculator(std::vector<cv::RotatedRect>& list_ell){
-     if(list_ell.empty() && (getCentersSQ().empty()||getCentersHX().empty())) return;
+void arucoSimulation(){
+    //creating aruco marker image
+    cv::Mat marker_image_cv;
+    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(10));
+    cv::aruco::drawMarker(dictionary, 23, 1440, marker_image_cv, 1);
+    std::vector<int> markerIds;
+    std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
+    cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
+    cv::Mat marker_image_rgb;///RGBa needed for visp Images. visp doesn't support vpImage<BGR> constructors!
+
+    cv::cvtColor(marker_image_cv,marker_image_rgb,CV_GRAY2RGB);
+
+
+
+
+    vpImage<vpRGBa> Iimage;//image displayed in the monitor
+    vpImage<vpRGBa> Icamera(1024,1280,255); //image projected in the camera
+    vpImageConvert::convert(marker_image_rgb,Iimage);
+
+    /// Camera Parameters
+    /// 1. p_x = ratio between focal length 'f=5mm' and pixel lenght 'l_x=4,8um'.
+    /// 2. p_y = ratio between focal length 'f=5mm' and pixel lenght 'l_y=4,8um'.
+    /// 3. & 4. u_0 & v_0 -> coordinates of the principal point
+
+    vpCameraParameters cam(1083, 1083, Icamera.getWidth()/2, Icamera.getHeight()/2);
+    cv::Mat cam_cv = (cv::Mat1d(3, 3) << cam.get_px(), 0, cam.get_u0(), 0, cam.get_py(), cam.get_v0(), 0, 0, 1); //camera matrix opencv
+
+    vpHomogeneousMatrix cMw(-0.0, 0, 1, vpMath::rad(0), vpMath::rad(0), vpMath::rad(0)); //  camera coordinates to world(image) coordinates
+
+    vpVirtualGrabber g(Iimage, cam); // Initialize image simulator
+    g.acquire(Icamera,cMw,Iimage);//acquire image projection with camera position wrt world coordinates
+
+    cv::Mat icamera_cv;///needed to convert the rgb visp image to bgr in order to display the rendered image in the right way.
+    vpImageConvert::convert(Icamera,icamera_cv);
+    cv::cvtColor(icamera_cv,icamera_cv,CV_RGBA2BGR);
+
+
+    vpHomogeneousMatrix wMc;// world to camera matrix. world coordinates are image coordinates
+    wMc=cMw.inverse();
+
+    vpSimulatorCamera robot; //instance of the free flying camera
+    robot.setPosition(wMc);
+    robot.setSamplingTime(0.006);// Modify the default sampling time to 0.006 second
+    robot.setMaxTranslationVelocity(2.);
+    robot.setMaxRotationVelocity(vpMath::rad(90));
+    vpColVector v(6);
+
+    v[2]=  0.5; // vz = 0.5 m/s
+
+
+    for(int i=0;;i++){
+        robot.setVelocity(vpRobot::CAMERA_FRAME,v);
+        robot.getPosition(wMc);
+        cMw=wMc.inverse();
+
+        //detection of the aruco image in the camera
+        cv::aruco::detectMarkers(icamera_cv, dictionary, markerCorners, markerIds, parameters, rejectedCandidates,cam_cv);
+        cv::aruco::drawDetectedMarkers(icamera_cv, markerCorners, markerIds);
+        cv::imshow("image de la camara", icamera_cv);
+        cv::waitKey(1);
+        vpImageConvert::convert(icamera_cv, Icamera);
+
+        g.acquire(Icamera, cMw, Iimage);
+        vpImageConvert::convert(Icamera,icamera_cv);
+    }
 }
 
 
