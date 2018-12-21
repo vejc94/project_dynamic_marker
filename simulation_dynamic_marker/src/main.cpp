@@ -2,11 +2,13 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/aruco.hpp>
 #include <opencv2/core/cvstd.hpp>
+
+
 //ViSP
 #include <visp/vpImageIo.h>
 #include <visp/vpImageSimulator.h>
 #include <visp3/robot/vpSimulatorCamera.h>
-
+#include <visp3/core/vpPixelMeterConversion.h>
 //project
 #include <iostream>
 #include <math.h>
@@ -23,19 +25,24 @@ public:
         ///Display size 345mm X 194mm
         for (int i = 0; i < 4; i++)
             X[i].resize(3);
+        target_=target;
+        double width = target.getWidth()*0.00018;
+        double height = target.getHeight()*0.00018;
+
         // Parameters for dynamic marker
         //Top left          Top right           Bottom right       Bottom left
-//        X[0][0] = -0.1725;  X[1][0] =  0.1725;  X[2][0] = 0.1725;  X[3][0] = -0.1725;
-//        X[0][1] = -0.097;   X[1][1] = -0.097;   X[2][1] = 0.097;   X[3][1] =  0.097;
-//        X[0][2] =  0;       X[1][2] =  0;       X[2][2] = 0;       X[3][2] =  0;
+        //        X[0][0] = -0.1725;  X[1][0] =  0.1725;  X[2][0] = 0.1725;  X[3][0] = -0.1725;
+        //        X[0][1] = -0.097;   X[1][1] = -0.097;   X[2][1] = 0.097;   X[3][1] =  0.097;
+        //        X[0][2] =  0;       X[1][2] =  0;       X[2][2] = 0;       X[3][2] =  0;
         //Parameters for aruco marker
-//        //Top left          Top right           Bottom right       Bottom left
-        X[0][0] = -0.1296;  X[1][0] =  0.1296;  X[2][0] = 0.1296;  X[3][0] = -0.1296;
-        X[0][1] = -0.1296;  X[1][1] = -0.1296;  X[2][1] = 0.1296;  X[3][1] =  0.1296;
-        X[0][2] =  0;       X[1][2] =  0;       X[2][2] = 0;       X[3][2] =  0;
-
-
-        target_=target;
+//        //        //Top left          Top right           Bottom right       Bottom left
+//        X[0][0] = -0.1296;  X[1][0] =  0.1296;  X[2][0] = 0.1296;  X[3][0] = -0.1296;
+//        X[0][1] = -0.1296;  X[1][1] = -0.1296;  X[2][1] = 0.1296;  X[3][1] =  0.1296;
+//        X[0][2] =  0;       X[1][2] =  0;       X[2][2] = 0;       X[3][2] =  0;
+        //        //Top left          Top right           Bottom right       Bottom left
+        X[0][0] = -width/2;   X[1][0] = width/2;    X[2][0] = width/2;   X[3][0] = -width/2;
+        X[0][1] = -height/2;  X[1][1] = -height/2;  X[2][1] = height/2;  X[3][1] =  height/2;
+        X[0][2] =  0;         X[1][2] =  0;         X[2][2] = 0;         X[3][2] =  0;
 
         // Initialize the image simulator
         cam_ = cam;
@@ -59,6 +66,9 @@ private:
 };
 
 
+//noise adding function
+void addNoise(cv::Mat img_src, cv::Mat &img_dst, double stddev);
+
 //detection of the ellipses
 std::vector<cv::RotatedRect> centerDetector(vpImage<vpRGBa> &I);
 
@@ -76,14 +86,18 @@ bool centerListComparator2(cv::Point point1, cv::Point point2);
 
 int main()
 {
-    arucoSimulation();
+    //Simulation with aruco marker
+    //arucoSimulation();
 
     ///create initializing image
     double init_radius = 200; //radius in pixels
     cv::Mat image_cv = cv::Mat(1080,1920,CV_8UC3,cv::Scalar(0,0,0)); //BGR Channels
     cv::Mat image_rgb;///RGBa needed for visp Images. visp doesn't support vpImage<BGR> constructors!
     cv::circle(image_cv, cv::Point(image_cv.cols/2, image_cv.rows/2), init_radius, cv::Scalar(0,0,255),-1);//circle draws with BGR Channels
-    cv::cvtColor(image_cv,image_rgb,CV_BGR2RGBA);
+    addNoise(image_cv,image_rgb,10);
+
+    cv::cvtColor(image_rgb,image_rgb,CV_BGR2RGBA);
+
 
     vpImage<vpRGBa> Iimage;//image displayed in the monitor
     vpImage<vpRGBa> Icamera(1024,1280,255); //image projected in the camera
@@ -141,22 +155,23 @@ int main()
         double Radius = controller.calculate(cMw, 50);//r_soll = 80 pixels
 
         //if(Radius>192){
-          //  squarePackingContinous(image_cv,Radius);
-            //projectionError(det_ellipses,wMc,cam,0);
+        //  squarePackingContinous(image_cv,Radius);
+        //projectionError(det_ellipses,wMc,cam,0);
         //}
         //else {
-            hexagonalPackingContinous(image_cv, Radius);
-            projectionError(det_ellipses,wMc,cam,1);
+        hexagonalPackingContinous(image_cv, Radius);
+        projectionError(det_ellipses,wMc,cam,1);
         //}
 
 
+        addNoise(image_cv,image_rgb,10);
 
-        cv::cvtColor(image_cv,image_rgb,CV_BGR2RGBA);
+        //cv::cvtColor(image_cv,image_rgb,CV_BGR2RGBA);
 
         cv::namedWindow("monitor",cv::WINDOW_NORMAL);
         cv::imshow("monitor", image_cv);
-
         cv::waitKey(1);
+
 
 
         vpImageConvert::convert(image_rgb, Iimage);
@@ -324,15 +339,24 @@ void projectionError(std::vector<cv::RotatedRect>& list_ell,vpHomogeneousMatrix&
 
 void arucoSimulation(){
     //creating aruco marker image
+    cv::Mat marker_image;
     cv::Mat marker_image_cv;
     cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(10));
-    cv::aruco::drawMarker(dictionary, 23, 1440, marker_image_cv, 1);
+    cv::aruco::drawMarker(dictionary, 23, 1440, marker_image, 1);
+     cv::Mat marker_image_rgb;///RGBa needed for visp Images. visp doesn't support vpImage<BGR> constructors!
+
+    //add noise
+    addNoise(marker_image, marker_image_cv,10);
+
     std::vector<int> markerIds;
+
+    //parameter for marker detection
     std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
     cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
-    cv::Mat marker_image_rgb;///RGBa needed for visp Images. visp doesn't support vpImage<BGR> constructors!
 
-    cv::cvtColor(marker_image_cv,marker_image_rgb,CV_GRAY2RGB);
+
+    cv::cvtColor(marker_image_cv,marker_image_rgb,CV_BGR2RGB);
+
     //for pose estimation
     cv::Mat distCoeff;
     std::vector<cv::Vec3d> rvecs, tvecs;
@@ -352,7 +376,7 @@ void arucoSimulation(){
     vpCameraParameters cam(1083, 1083, Icamera.getWidth()/2, Icamera.getHeight()/2);
     cv::Mat cam_cv = (cv::Mat1d(3, 3) << cam.get_px(), 0, cam.get_u0(), 0, cam.get_py(), cam.get_v0(), 0, 0, 1); //camera matrix opencv
 
-    vpHomogeneousMatrix cMw(-0.0, 0, 1, vpMath::rad(0), vpMath::rad(0), vpMath::rad(0)); //  camera coordinates to world(image) coordinates
+    vpHomogeneousMatrix cMw(-0.0, 0, 2, vpMath::rad(0), vpMath::rad(0), vpMath::rad(0)); //  camera coordinates to world(image) coordinates
 
     vpVirtualGrabber g(Iimage, cam); // Initialize image simulator
     g.acquire(Icamera,cMw,Iimage);//acquire image projection with camera position wrt world coordinates
@@ -379,7 +403,7 @@ void arucoSimulation(){
         robot.setVelocity(vpRobot::CAMERA_FRAME,v);
         robot.getPosition(wMc);
         cMw=wMc.inverse();
-
+        //addNoise(icamera_cv, 10);
         //detection of the aruco image in the camera
         cv::aruco::detectMarkers(icamera_cv, dictionary, markerCorners, markerIds, parameters, rejectedCandidates,cam_cv);
         cv::aruco::drawDetectedMarkers(icamera_cv, markerCorners, markerIds);
@@ -407,6 +431,24 @@ void arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vector
     std::cout << tvec[2] - wMc.inverse().getTranslationVector()[2] << std::endl;
 
 }
+
+void addNoise(cv::Mat img_src, cv::Mat &img_dst, double stddev){
+    cv::Mat img_src16;
+    if(img_src.channels()==1){
+        cv::cvtColor(img_src, img_src16, CV_GRAY2BGR);
+        img_src16.convertTo(img_src16, CV_16SC3);
+    }
+    else
+        img_src.convertTo(img_src16, CV_16SC3);
+
+    cv::Mat noise_img = cv::Mat(img_src.size(),CV_16SC3);
+    randn(noise_img, cv::Scalar::all(0.0), cv::Scalar::all(stddev));
+
+    addWeighted(img_src16, 1.0, noise_img, 1.0, 0.0, img_src16);
+    img_src16.convertTo(img_dst,img_src.type());
+
+}
+
 //sort contours in descending order of area.
 bool contourAreaComparator(std::vector<cv::Point> contour1, std::vector<cv::Point> contour2){
     double i = fabs( cv::contourArea(contour1));

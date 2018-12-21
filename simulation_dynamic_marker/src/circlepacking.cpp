@@ -214,12 +214,15 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
             //first curve [R + t, sqrt(3)*(t - R)];
             double x1 = lamda*(radius + t) + mon_cols/2;
             double y1 = lamda*(sqrt(3)*(t - radius)) + mon_rows/2;
+
+
+            //pushing points
+            if((x1<0)||(x1>mon_cols)||(y1<0||y1>mon_rows)){//checking if center fits in the monitor
+               continue;
+        }
             //mirrored point
             double x1_m = mon_cols - x1;
 
-            //pushing points
-            if((x1<0)||(x1>mon_cols)||(y1<0||y1>mon_rows))//checking if center fits in the monitor
-                continue;
             centers_hx.push_back(Point(x1,y1));
             centers_hx.push_back(Point(x1_m,y1));
         }
@@ -265,11 +268,12 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
         ///Checking if the circles with coordinates x, y fits in the display
         /// if not draw circle with an smaller radius.
         if((centers_hx.at(i).x - radius < 0)||(centers_hx.at(i).y - radius < 0)||(centers_hx.at(i).x + radius > mon_cols)||(centers_hx.at(i).y + radius > mon_rows)){
-            if(centers_hx.at(i).y - radius <0){
+            if(centers_hx.at(i).y - radius <0){   
                 double r_small = centers_hx.at(i).y;
                 circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
             }
             else if(centers_hx.at(i).y + radius > mon_rows){
+
                 double r_small = mon_rows - centers_hx.at(i).y;
                 circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
             }
@@ -283,10 +287,7 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
                 double r_small = mon_cols - centers_hx.at(i).x;
                 circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
             }
-
         }
-
-
 
         else{
             circle(image,centers_hx.at(i), radius-10, Scalar(255,255,255), -1);
