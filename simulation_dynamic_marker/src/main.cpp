@@ -35,10 +35,10 @@ public:
         //        X[0][1] = -0.097;   X[1][1] = -0.097;   X[2][1] = 0.097;   X[3][1] =  0.097;
         //        X[0][2] =  0;       X[1][2] =  0;       X[2][2] = 0;       X[3][2] =  0;
         //Parameters for aruco marker
-//        //        //Top left          Top right           Bottom right       Bottom left
-//        X[0][0] = -0.1296;  X[1][0] =  0.1296;  X[2][0] = 0.1296;  X[3][0] = -0.1296;
-//        X[0][1] = -0.1296;  X[1][1] = -0.1296;  X[2][1] = 0.1296;  X[3][1] =  0.1296;
-//        X[0][2] =  0;       X[1][2] =  0;       X[2][2] = 0;       X[3][2] =  0;
+        //        //        //Top left          Top right           Bottom right       Bottom left
+        //        X[0][0] = -0.1296;  X[1][0] =  0.1296;  X[2][0] = 0.1296;  X[3][0] = -0.1296;
+        //        X[0][1] = -0.1296;  X[1][1] = -0.1296;  X[2][1] = 0.1296;  X[3][1] =  0.1296;
+        //        X[0][2] =  0;       X[1][2] =  0;       X[2][2] = 0;       X[3][2] =  0;
         //        //Top left          Top right           Bottom right       Bottom left
         X[0][0] = -width/2;   X[1][0] = width/2;    X[2][0] = width/2;   X[3][0] = -width/2;
         X[0][1] = -height/2;  X[1][1] = -height/2;  X[2][1] = height/2;  X[3][1] =  height/2;
@@ -87,14 +87,15 @@ bool centerListComparator2(cv::Point point1, cv::Point point2);
 int main()
 {
     //Simulation with aruco marker
-    //arucoSimulation();
+    arucoSimulation();
 
     ///create initializing image
     double init_radius = 200; //radius in pixels
     cv::Mat image_cv = cv::Mat(1080,1920,CV_8UC3,cv::Scalar(0,0,0)); //BGR Channels
     cv::Mat image_rgb;///RGBa needed for visp Images. visp doesn't support vpImage<BGR> constructors!
     cv::circle(image_cv, cv::Point(image_cv.cols/2, image_cv.rows/2), init_radius, cv::Scalar(0,0,255),-1);//circle draws with BGR Channels
-    addNoise(image_cv,image_rgb,10);
+
+    addNoise(image_cv,image_rgb,20);
 
     cv::cvtColor(image_rgb,image_rgb,CV_BGR2RGBA);
 
@@ -110,7 +111,7 @@ int main()
 
     vpCameraParameters cam(1083, 1083, Icamera.getWidth()/2, Icamera.getHeight()/2);
 
-    vpHomogeneousMatrix cMw(-0.0, 0, 0.8, vpMath::rad(0), vpMath::rad(0), vpMath::rad(0)); //  camera coordinates to world(image) coordinates
+    vpHomogeneousMatrix cMw(-0.0, 0, 2, vpMath::rad(0), vpMath::rad(0), vpMath::rad(0)); //  camera coordinates to world(image) coordinates
 
     vpVirtualGrabber g(Iimage, cam); // Initialize image simulator
     g.acquire(Icamera,cMw,Iimage);//acquire image projection with camera position wrt world coordinates
@@ -133,7 +134,14 @@ int main()
     v[2]=  0.5; // vz = 0.5 m/s
 
     std::vector<cv::RotatedRect> det_ellipses;
-    circleController controller(192,5);
+
+    ///varying size marker
+    circleController controller(530,5);
+
+    ///fixed marker
+    //circleController controller(110,110);
+
+
 
     for(int i=0;;i++){
         robot.setVelocity(vpRobot::CAMERA_FRAME,v);
@@ -163,9 +171,6 @@ int main()
         projectionError(det_ellipses,wMc,cam,1);
         //}
 
-
-        addNoise(image_cv,image_rgb,10);
-
         //cv::cvtColor(image_cv,image_rgb,CV_BGR2RGBA);
 
         cv::namedWindow("monitor",cv::WINDOW_NORMAL);
@@ -173,11 +178,13 @@ int main()
         cv::waitKey(1);
 
 
-
         vpImageConvert::convert(image_rgb, Iimage);
         g.acquire(Icamera, cMw, Iimage);
         vpImageConvert::convert(Icamera,icamera_cv);
+        addNoise(image_cv,image_rgb,20);
         cv::cvtColor(icamera_cv,icamera_cv,CV_RGBA2BGR);
+
+
 
         cv::imshow("image de la camara", icamera_cv);
         cv::waitKey(1);
@@ -276,8 +283,18 @@ void projectionError(std::vector<cv::RotatedRect>& list_ell,vpHomogeneousMatrix&
     }
 
 
+    //errors of intrinsic parameters
+    double delta_p = 2;
+    double delta_u0 = 3;
+    double delta_v0 = 1.5;
+
     //for solving solvepnp
     cv::Mat cam_cv = (cv::Mat1d(3, 3) << cam.get_px(), 0, cam.get_u0(), 0, cam.get_py(), cam.get_v0(), 0, 0, 1); //camera matrix opencv
+    cam_cv.at<double>(0,0)+= delta_p;
+    cam_cv.at<double>(1,1)+= delta_p;
+    cam_cv.at<double>(0,2)+= delta_u0;
+    cam_cv.at<double>(1,2)+= delta_v0;
+
     cv::Mat rvec, tvec, Rmat; // rotation, translation vector and rotation matrix
     if( (list_det_centers.size() > 3)) {
         cv::solvePnP(objectPoints,imagePoints,cam_cv, std::vector<int>(0), rvec, tvec);
@@ -287,6 +304,7 @@ void projectionError(std::vector<cv::RotatedRect>& list_ell,vpHomogeneousMatrix&
 
 
     ///error calculation opencv function project()
+    /*
     cv::Mat crw;
     cv::Mat cRw = (cv::Mat1d(3,3) << wMc.inverse()[0][0],wMc.inverse()[0][1],wMc.inverse()[0][2],wMc.inverse()[1][0],wMc.inverse()[1][1],wMc.inverse()[1][2],wMc.inverse()[2][0],wMc.inverse()[2][1],wMc.inverse()[2][2] );
     cv::Rodrigues(cRw, crw);
@@ -302,12 +320,12 @@ void projectionError(std::vector<cv::RotatedRect>& list_ell,vpHomogeneousMatrix&
         float error_y = proj_points.at(i).y - imagePoints.at(i).y;
         error += error_x*error_x + error_y*error_y;
     }
-    //std::cout << sqrt(error/proj_points.size()) << std::endl;
-
+    std::cout << sqrt(error/proj_points.size()) << std::endl;
+*/
 
     ///error calculation for the center points with my method.
-    for(uint i = 0; i < list_det_centers.size(); i++){
-        ///error calculation opencv function project()
+    /*
+     for(uint i = 0; i < list_det_centers.size(); i++){
 
 
         /// (u_mon - u_0_mon)*px = x
@@ -328,13 +346,19 @@ void projectionError(std::vector<cv::RotatedRect>& list_ell,vpHomogeneousMatrix&
     for(uint i = 0; i<list_errors.size(); i++){
         error+=list_errors.at(i);
     }
+    */
+
     //std::cout <<sqrt(error/list_errors.size())<< std::endl;
     //variables for file saving
-    //    std::string filename = "errors1.yaml";
-    //    cv::FileStorage fs(filename, cv::FileStorage::APPEND);
-    //    fs << "projection error" << sqrt(error/list_errors.size());
-    //    fs << "N" << (int)list_errors.size();
-    //    fs.release();
+    if(!tvec.empty()){
+        double error_z= tvec.at<double>(2) - wMc.inverse().getTranslationVector()[2];
+        std::string filename = "errors_fm.yaml";
+        cv::FileStorage fs(filename, cv::FileStorage::APPEND);
+        fs << "error Z-Coordinate" << error_z;
+        fs << "ground-truth Z-Coordinate" << wMc.inverse().getTranslationVector()[2];
+        fs.release();
+    }
+
 }
 
 void arucoSimulation(){
@@ -343,10 +367,10 @@ void arucoSimulation(){
     cv::Mat marker_image_cv;
     cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(10));
     cv::aruco::drawMarker(dictionary, 23, 1440, marker_image, 1);
-     cv::Mat marker_image_rgb;///RGBa needed for visp Images. visp doesn't support vpImage<BGR> constructors!
+    cv::Mat marker_image_rgb;///RGBa needed for visp Images. visp doesn't support vpImage<BGR> constructors!
 
     //add noise
-    addNoise(marker_image, marker_image_cv,10);
+    addNoise(marker_image, marker_image_cv,20);
 
     std::vector<int> markerIds;
 
@@ -414,12 +438,29 @@ void arucoSimulation(){
         cv::waitKey(1);
         vpImageConvert::convert(icamera_cv, Icamera);
 
+
+        if(i == 50)
+            cv::imwrite("noise_image_aruco.png", icamera_cv);
+
         g.acquire(Icamera, cMw, Iimage);
         vpImageConvert::convert(Icamera,icamera_cv);
+        //addNoise(icamera_cv, icamera_cv, 20);
+
     }
 }
 
 void arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vector<cv::Vec3d> tvecs, cv::Mat cam_pam, float marker_length, std::vector<std::vector<cv::Point2f>> markerCorners, vpHomogeneousMatrix &wMc){
+
+    //errors of intrinsic parameters
+    double delta_p = 2;
+    double delta_u0 = 3;
+    double delta_v0 = 1.5;
+
+    cam_pam.at<double>(0,0)+= delta_p;
+    cam_pam.at<double>(1,1)+= delta_p;
+    cam_pam.at<double>(0,2)+= delta_u0;
+    cam_pam.at<double>(1,2)+= delta_v0;
+
     //rotation matrix of the rotation vector
     cv::Mat Rmat;
     cv::aruco::estimatePoseSingleMarkers(markerCorners, marker_length, cam_pam, distCoeff, rvecs, tvecs);
@@ -429,6 +470,16 @@ void arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vector
 
     //error of the z component of the translation vector
     std::cout << tvec[2] - wMc.inverse().getTranslationVector()[2] << std::endl;
+
+    //for file saving
+    if(tvec[2]){
+        double error_z= tvec[2] - wMc.inverse().getTranslationVector()[2];
+        std::string filename = "errors_aruco.yaml";
+        cv::FileStorage fs(filename, cv::FileStorage::APPEND);
+        fs << "error Z-Coordinate" << error_z;
+        fs << "ground-truth Z-Coordinate" << wMc.inverse().getTranslationVector()[2];
+        fs.release();
+    }
 
 }
 
