@@ -31,9 +31,9 @@ public:
 
         // Parameters for dynamic marker
         //Top left          Top right           Bottom right       Bottom left
-        //        X[0][0] = -0.1725;  X[1][0] =  0.1725;  X[2][0] = 0.1725;  X[3][0] = -0.1725;
-        //        X[0][1] = -0.097;   X[1][1] = -0.097;   X[2][1] = 0.097;   X[3][1] =  0.097;
-        //        X[0][2] =  0;       X[1][2] =  0;       X[2][2] = 0;       X[3][2] =  0;
+        //X[0][0] = -0.1725;  X[1][0] =  0.1725;  X[2][0] = 0.1725;  X[3][0] = -0.1725;
+        //X[0][1] = -0.097;   X[1][1] = -0.097;   X[2][1] = 0.097;   X[3][1] =  0.097;
+        //X[0][2] =  0;       X[1][2] =  0;       X[2][2] = 0;       X[3][2] =  0;
         //Parameters for aruco marker
         //        //        //Top left          Top right           Bottom right       Bottom left
         //        X[0][0] = -0.1296;  X[1][0] =  0.1296;  X[2][0] = 0.1296;  X[3][0] = -0.1296;
@@ -68,34 +68,39 @@ private:
 
 //noise adding function
 void addNoise(cv::Mat img_src, cv::Mat &img_dst, double stddev);
-
+void setSPNoise(cv::Mat img_src, cv::Mat &img_dst,double p);
 //detection of the ellipses
 std::vector<cv::RotatedRect> centerDetector(vpImage<vpRGBa> &I);
 
 //error calculation of the dynamic marker
-void projectionError(std::vector<cv::RotatedRect>& list_ell, vpHomogeneousMatrix& wMc, vpCameraParameters cam, int packing);
+double projectionError(std::vector<cv::RotatedRect>& list_ell, vpHomogeneousMatrix& wMc, vpCameraParameters cam, int packing);
 
 //simulation of the aruco marker and error calculation
 void arucoSimulation();
-void arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vector<cv::Vec3d> tvecs, cv::Mat cam_pam, float marker_length, std::vector<std::vector<cv::Point2f>> markerCorners, vpHomogeneousMatrix& wMc);
+double arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vector<cv::Vec3d> tvecs, cv::Mat cam_pam, float marker_length, std::vector<std::vector<cv::Point2f>> markerCorners, vpHomogeneousMatrix& wMc);
 
 //for sorting the list of the detected ellipses and the created ellipses
 bool contourAreaComparator(std::vector<cv::Point> contour1, std::vector<cv::Point> contour2);
 bool centerListComparator1(cv::Point point1, cv::Point point2);
 bool centerListComparator2(cv::Point point1, cv::Point point2);
 
+//for writing the error
+void writeError(std::string filename, double error_z, vpHomogeneousMatrix wMc);
+
 int main()
 {
     //Simulation with aruco marker
-    arucoSimulation();
+    //arucoSimulation();
 
     ///create initializing image
     double init_radius = 200; //radius in pixels
-    cv::Mat image_cv = cv::Mat(1080,1920,CV_8UC3,cv::Scalar(0,0,0)); //BGR Channels
+    cv::Mat image_cv = cv::Mat(1080,1920,CV_8UC3,cv::Scalar(255,255,255)); //BGR Channels
     cv::Mat image_rgb;///RGBa needed for visp Images. visp doesn't support vpImage<BGR> constructors!
-    cv::circle(image_cv, cv::Point(image_cv.cols/2, image_cv.rows/2), init_radius, cv::Scalar(0,0,255),-1);//circle draws with BGR Channels
+    cv::circle(image_cv, cv::Point(image_cv.cols/2, image_cv.rows/2), init_radius, cv::Scalar(0,0,0),-1);//circle draws with BGR Channels
 
-    addNoise(image_cv,image_rgb,20);
+    //add Noise
+    //addNoise(image_cv,image_rgb,20);
+    setSPNoise(image_cv,image_rgb,0.01);
 
     cv::cvtColor(image_rgb,image_rgb,CV_BGR2RGBA);
 
@@ -136,11 +141,14 @@ int main()
     std::vector<cv::RotatedRect> det_ellipses;
 
     ///varying size marker
-    circleController controller(530,5);
+    ///circleController controller(530,5);
 
     ///fixed marker
-    //circleController controller(110,110);
+    circleController controller(110,110);
 
+    double error_z;
+    std::string filename = "errors_fm_bw.txt";
+    cv::FileStorage fs(filename, cv::FileStorage::WRITE);
 
 
     for(int i=0;;i++){
@@ -162,14 +170,17 @@ int main()
 
         double Radius = controller.calculate(cMw, 50);//r_soll = 80 pixels
 
-        //if(Radius>192){
-        //  squarePackingContinous(image_cv,Radius);
-        //projectionError(det_ellipses,wMc,cam,0);
-        //}
-        //else {
-        hexagonalPackingContinous(image_cv, Radius);
-        projectionError(det_ellipses,wMc,cam,1);
-        //}
+        if(Radius>192){
+            squarePacking(image_cv,Radius);
+          //  squarePackingContinous(image_cv,Radius);
+            error_z = projectionError(det_ellipses,wMc,cam,0);
+        }
+        else {
+           hexagonalPacking(image_cv, Radius);
+        //    hexagonalPackingContinous(image_cv, Radius);
+            error_z=projectionError(det_ellipses,wMc,cam,1);
+        }
+        writeError(filename,error_z,wMc);
 
         //cv::cvtColor(image_cv,image_rgb,CV_BGR2RGBA);
 
@@ -181,7 +192,9 @@ int main()
         vpImageConvert::convert(image_rgb, Iimage);
         g.acquire(Icamera, cMw, Iimage);
         vpImageConvert::convert(Icamera,icamera_cv);
-        addNoise(image_cv,image_rgb,20);
+
+        //addNoise(image_cv,image_rgb,20);
+        setSPNoise(image_cv,image_rgb,0.01);
         cv::cvtColor(icamera_cv,icamera_cv,CV_RGBA2BGR);
 
 
@@ -191,7 +204,7 @@ int main()
 
     }
 
-
+    fs.release();
     return 0;
 
 }
@@ -236,15 +249,15 @@ std::vector<cv::RotatedRect> centerDetector(vpImage<vpRGBa> &I){
     return det_ellipses;
 }
 
-void projectionError(std::vector<cv::RotatedRect>& list_ell,vpHomogeneousMatrix& wMc, vpCameraParameters cam, int packing){
-    if(list_ell.empty() && (getCentersSQ().empty()||getCentersHX().empty())) return;
+double projectionError(std::vector<cv::RotatedRect>& list_ell,vpHomogeneousMatrix& wMc, vpCameraParameters cam, int packing){
+    if(list_ell.empty() && (getCentersSQ().empty()||getCentersHX().empty())) return NAN;
 
     std::vector<cv::Point> list_centers;
     if(packing==0) list_centers = getCentersSQ();
     else if(packing == 1) list_centers = getCentersHX();
     else{std::cout << "invalid type of packing" << std::endl;}
 
-    if(list_ell.size()!=list_centers.size()) return;
+    if(list_ell.size()!=list_centers.size()) return NAN;
 
     std::vector<cv::Point2f> list_det_centers;
     std::vector<float> list_errors;
@@ -352,13 +365,14 @@ void projectionError(std::vector<cv::RotatedRect>& list_ell,vpHomogeneousMatrix&
     //variables for file saving
     if(!tvec.empty()){
         double error_z= tvec.at<double>(2) - wMc.inverse().getTranslationVector()[2];
-        std::string filename = "errors_fm.yaml";
-        cv::FileStorage fs(filename, cv::FileStorage::APPEND);
-        fs << "error Z-Coordinate" << error_z;
-        fs << "ground-truth Z-Coordinate" << wMc.inverse().getTranslationVector()[2];
-        fs.release();
+//        std::string filename = "errors_fm.yaml";
+//        cv::FileStorage fs(filename, cv::FileStorage::APPEND);
+//        fs << "error Z-Coordinate" << error_z;
+//        fs << "ground-truth Z-Coordinate" << wMc.inverse().getTranslationVector()[2];
+//        fs.release();
+        return error_z;
     }
-
+    return NAN;
 }
 
 void arucoSimulation(){
@@ -370,8 +384,8 @@ void arucoSimulation(){
     cv::Mat marker_image_rgb;///RGBa needed for visp Images. visp doesn't support vpImage<BGR> constructors!
 
     //add noise
-    addNoise(marker_image, marker_image_cv,20);
-
+    //addNoise(marker_image, marker_image_cv,20);
+    setSPNoise(marker_image, marker_image_cv,0.01);
     std::vector<int> markerIds;
 
     //parameter for marker detection
@@ -422,18 +436,24 @@ void arucoSimulation(){
 
     v[2]=  0.5; // vz = 0.5 m/s
 
+    double error_z;
+    std::string filename = "errors_aruco.txt";
+    //cv::FileStorage fs(filename, cv::FileStorage::WRITE);
 
     for(int i=0;;i++){
         robot.setVelocity(vpRobot::CAMERA_FRAME,v);
         robot.getPosition(wMc);
         cMw=wMc.inverse();
-        //addNoise(icamera_cv, 10);
+
         //detection of the aruco image in the camera
         cv::aruco::detectMarkers(icamera_cv, dictionary, markerCorners, markerIds, parameters, rejectedCandidates,cam_cv);
         cv::aruco::drawDetectedMarkers(icamera_cv, markerCorners, markerIds);
 
         //estimate pose
-        arucoPoseError(distCoeff, rvecs, tvecs, cam_cv, marker_length, markerCorners, wMc);
+        error_z =arucoPoseError(distCoeff, rvecs, tvecs, cam_cv, marker_length, markerCorners, wMc);
+
+        //
+        writeError(filename,error_z,wMc);
         cv::imshow("image de la camara", icamera_cv);
         cv::waitKey(1);
         vpImageConvert::convert(icamera_cv, Icamera);
@@ -444,12 +464,13 @@ void arucoSimulation(){
 
         g.acquire(Icamera, cMw, Iimage);
         vpImageConvert::convert(Icamera,icamera_cv);
-        //addNoise(icamera_cv, icamera_cv, 20);
+
 
     }
+     //fs.release();
 }
 
-void arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vector<cv::Vec3d> tvecs, cv::Mat cam_pam, float marker_length, std::vector<std::vector<cv::Point2f>> markerCorners, vpHomogeneousMatrix &wMc){
+double arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vector<cv::Vec3d> tvecs, cv::Mat cam_pam, float marker_length, std::vector<std::vector<cv::Point2f>> markerCorners, vpHomogeneousMatrix &wMc){
 
     //errors of intrinsic parameters
     double delta_p = 2;
@@ -474,13 +495,11 @@ void arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vector
     //for file saving
     if(tvec[2]){
         double error_z= tvec[2] - wMc.inverse().getTranslationVector()[2];
-        std::string filename = "errors_aruco.yaml";
-        cv::FileStorage fs(filename, cv::FileStorage::APPEND);
-        fs << "error Z-Coordinate" << error_z;
-        fs << "ground-truth Z-Coordinate" << wMc.inverse().getTranslationVector()[2];
-        fs.release();
+        return error_z;
+//        fs << "error Z-Coordinate" << error_z;
+//        fs << "ground-truth Z-Coordinate" << wMc.inverse().getTranslationVector()[2];
     }
-
+    return NAN;
 }
 
 void addNoise(cv::Mat img_src, cv::Mat &img_dst, double stddev){
@@ -498,6 +517,34 @@ void addNoise(cv::Mat img_src, cv::Mat &img_dst, double stddev){
     addWeighted(img_src16, 1.0, noise_img, 1.0, 0.0, img_src16);
     img_src16.convertTo(img_dst,img_src.type());
 
+}
+
+void setSPNoise(cv::Mat img_src, cv::Mat &img_dst,double p){
+    cv::Mat img_src16;
+    if(img_src.channels()==1){
+        cv::cvtColor(img_src, img_src16, CV_GRAY2BGR);
+        img_src16.convertTo(img_src16, CV_16SC3);
+    }
+    else
+        img_src.convertTo(img_src16, CV_16SC3);
+
+    //random number generator for pseudo uniform distributed random variables
+    cv::RNG x(cv::getTickCount());
+
+    for(int i = 0;i<1080; i++){
+        for(int j = 0; j<1920; j++){
+            float s_p = x.uniform(0.00,1.00);
+            if(s_p<p/2)
+                img_src16.at<char>(i,j)=255;
+
+        else if(s_p>1-p/2)
+            img_src16.at<char>(i,j)=0;
+        }
+    }
+//    cv::imshow("prueba",temp_img);
+//    cv::waitKey(0);
+
+    img_src16.convertTo(img_dst,img_src.type());
 }
 
 //sort contours in descending order of area.
@@ -534,4 +581,22 @@ bool centerListComparator2(cv::Point point1, cv::Point point2){
     else{
         return (i < j);
     }
+}
+
+
+void writeError(std::string filename, double error_z, vpHomogeneousMatrix wMc){
+
+    std::ofstream error_file;
+
+    error_file.open(filename,std::ios_base::app);
+    //if(empty==true) error_file<<"# name: A\n"<<"# type: matrix\n"<<"# rows: <"\n# columns: 2 " <<endl;
+
+    error_file << error_z<< "," <<wMc.inverse().getTranslationVector()[2]<<std::endl;
+
+
+
+    error_file.close();
+
+//    filename << "error Z-Coordinate" << error_z;
+//    filename << "ground-truth Z-Coordinate" << wMc.inverse().getTranslationVector()[2];
 }

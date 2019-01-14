@@ -37,7 +37,7 @@ void squarePacking(Mat image, double radius){
         else{
             circle(image, centers_sq.at(i), (int)radius-30, Scalar(255,255,255), -1);//-10 para dar espacio entre circulos
 
-            if(n==4 && m==2)std::cout << radius << std::endl;
+
         }
     }
 }
@@ -73,7 +73,7 @@ void hexagonalPacking(Mat image, double radius){
         }
     //}
     for(uint i=0; i<centers_hx.size(); i++){
-        if(i<n) circle(image, centers_hx.at(i), (int)radius-15, Scalar(0,0,255), -1);
+        if(i<n) circle(image, centers_hx.at(i), (int)radius-15, Scalar(255,255,255), -1);
         else circle(image, centers_hx.at(i), (int)radius-15, Scalar(255,255,255), -1);
 
     }
