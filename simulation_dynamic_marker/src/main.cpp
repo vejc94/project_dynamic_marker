@@ -90,7 +90,7 @@ void writeError(std::string filename, double error_z, vpHomogeneousMatrix wMc);
 int main()
 {
     //Simulation with aruco marker
-    //arucoSimulation();
+    arucoSimulation();
 
     ///create initializing image
     double init_radius = 200; //radius in pixels
@@ -100,7 +100,7 @@ int main()
 
     //add Noise
     //addNoise(image_cv,image_rgb,20);
-    setSPNoise(image_cv,image_rgb,0.01);
+    //setSPNoise(image_cv,image_rgb,0.01);
 
     cv::cvtColor(image_rgb,image_rgb,CV_BGR2RGBA);
 
@@ -194,7 +194,7 @@ int main()
         vpImageConvert::convert(Icamera,icamera_cv);
 
         //addNoise(image_cv,image_rgb,20);
-        setSPNoise(image_cv,image_rgb,0.01);
+        //setSPNoise(image_cv,image_rgb,0.01);
         cv::cvtColor(icamera_cv,icamera_cv,CV_RGBA2BGR);
 
 
@@ -385,7 +385,7 @@ void arucoSimulation(){
 
     //add noise
     //addNoise(marker_image, marker_image_cv,20);
-    setSPNoise(marker_image, marker_image_cv,0.01);
+    //setSPNoise(marker_image, marker_image_cv,0.01);
     std::vector<int> markerIds;
 
     //parameter for marker detection
@@ -393,7 +393,7 @@ void arucoSimulation(){
     cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
 
 
-    cv::cvtColor(marker_image_cv,marker_image_rgb,CV_BGR2RGB);
+    //cv::cvtColor(marker_image_cv,marker_image_rgb,CV_BGR2RGB);
 
     //for pose estimation
     cv::Mat distCoeff;
@@ -404,7 +404,7 @@ void arucoSimulation(){
 
     vpImage<vpRGBa> Iimage;//image displayed in the monitor
     vpImage<vpRGBa> Icamera(1024,1280,255); //image projected in the camera
-    vpImageConvert::convert(marker_image_rgb,Iimage);
+    vpImageConvert::convert(marker_image,Iimage);
 
     /// Camera Parameters
     /// 1. p_x = ratio between focal length 'f=5mm' and pixel lenght 'l_x=4,8um'.
@@ -476,15 +476,20 @@ double arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vect
     double delta_p = 2;
     double delta_u0 = 3;
     double delta_v0 = 1.5;
+    static bool camera_error=false;
+    if(!camera_error){
+        cam_pam.at<double>(0,0)+= delta_p;
+        cam_pam.at<double>(1,1)+= delta_p;
+        cam_pam.at<double>(0,2)+= delta_u0;
+        cam_pam.at<double>(1,2)+= delta_v0;
+        camera_error=true;
+    }
 
-    cam_pam.at<double>(0,0)+= delta_p;
-    cam_pam.at<double>(1,1)+= delta_p;
-    cam_pam.at<double>(0,2)+= delta_u0;
-    cam_pam.at<double>(1,2)+= delta_v0;
 
     //rotation matrix of the rotation vector
     cv::Mat Rmat;
     cv::aruco::estimatePoseSingleMarkers(markerCorners, marker_length, cam_pam, distCoeff, rvecs, tvecs);
+    if(tvecs.empty()) return NAN;
     cv::Vec3d tvec = tvecs[0];
 
     //cv::Rodrigues(rvecs.at(0),Rmat);
