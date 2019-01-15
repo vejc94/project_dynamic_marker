@@ -6,6 +6,7 @@ int mon_rows = 1080;
 int mon_cols = 1920;
 std::vector<Point> centers_sq;
 std::vector<Point> centers_hx;
+std::vector<Point> centers_hx_real;
 
 ///this funtion packs the cirlce in the image with the given radius in a square form.
 
@@ -73,7 +74,7 @@ void hexagonalPacking(Mat image, double radius){
         }
     //}
     for(uint i=0; i<centers_hx.size(); i++){
-        if(i<n) circle(image, centers_hx.at(i), (int)radius-15, Scalar(255,255,255), -1);
+        if(i<(uint)n) circle(image, centers_hx.at(i), (int)radius-15, Scalar(255,255,255), -1);
         else circle(image, centers_hx.at(i), (int)radius-15, Scalar(255,255,255), -1);
 
     }
@@ -136,7 +137,7 @@ void squarePackingContinous(Mat image, double radius){
             for(int i = 0; i < 3; i++){
                 centers_sq.push_back(Point(centers_sq.at(i).x, mon_rows-r_bottom -10 ));
             }
-            for(int i = centers_sq.size()-1; i> centers_sq.size()-4;i--){
+            for(uint i = centers_sq.size()-1; i> centers_sq.size()-4;i--){
                 if(r_bottom < radius-20) circle(image, centers_sq.at(i), r_bottom - r_bottom/20, Scalar(255,255,255), -1);
                 else{
                     centers_sq.at(i).y = 3*radius - 25 ;
@@ -173,7 +174,7 @@ void squarePackingContinous(Mat image, double radius){
                         for(int i = 0; i < 2; i++){
                             centers_sq.push_back(Point(mon_cols-r_6 -10, (2*i+1)*radius));
                         }
-                        for(int i = centers_sq.size()-1; i > centers_sq.size()-3; i--){
+                        for(uint i = centers_sq.size()-1; i > centers_sq.size()-3; i--){
                             circle(image, centers_sq.at(i), r_6 -r_6/9 , Scalar(255,255,255), -1);
                         }
                     }
@@ -184,7 +185,7 @@ void squarePackingContinous(Mat image, double radius){
                         for(int i = 0; i < 4; i++){
                             centers_sq.push_back(Point((2*i+1)*radius, mon_rows-r_5-15));
                         }
-                        for(int i = centers_sq.size()-1; i > centers_sq.size()-5; i--){
+                        for(uint i = centers_sq.size()-1; i > centers_sq.size()-5; i--){
                             circle(image, centers_sq.at(i), r_5 -r_5/10 , Scalar(255,255,255), -1);
                         }
                         //bottom right corner
@@ -199,11 +200,12 @@ void squarePackingContinous(Mat image, double radius){
 }
 
 void hexagonalPackingContinous(cv::Mat image, double radius){
-    image.setTo(0);
+    image.setTo(255);
     centers_hx.clear();
+    centers_hx_real.clear();
     centers_hx.push_back(Point(mon_cols/2,mon_rows/2));
 
-    int a = mon_rows/(sqrt(3)*radius);//number of circles in rows
+    //int a = mon_rows/(sqrt(3)*radius);//number of circles in rows
     int b = mon_cols /(2 * radius);//number of circles in columns
 
     double t; // parameter for curve
@@ -267,33 +269,39 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
     for(uint i = 0; i < centers_hx.size(); i++){
         ///Checking if the circles with coordinates x, y fits in the display
         /// if not draw circle with an smaller radius.
-        if((centers_hx.at(i).x - radius < 0)||(centers_hx.at(i).y - radius < 0)||(centers_hx.at(i).x + radius > mon_cols)||(centers_hx.at(i).y + radius > mon_rows)){
-            if(centers_hx.at(i).y - radius <0){   
-                double r_small = centers_hx.at(i).y;
-                circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
-            }
-            else if(centers_hx.at(i).y + radius > mon_rows){
+        if((centers_hx.at(i).x - radius < 0)||(centers_hx.at(i).y - radius < 0)||(centers_hx.at(i).x + radius > mon_cols)||(centers_hx.at(i).y + radius > mon_rows)){           
+//            if(centers_hx.at(i).y - radius <0){
+//                double r_small = centers_hx.at(i).y;
+//                circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
+//            }
+//            else if(centers_hx.at(i).y + radius > mon_rows){
 
-                double r_small = mon_rows - centers_hx.at(i).y;
-                circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
-            }
-            else if(centers_hx.at(i).x - radius <0){
-                double r_small = centers_hx.at(i).x;
-                circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
-            }
+//                double r_small = mon_rows - centers_hx.at(i).y;
+//                circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
+//            }
+//            else if(centers_hx.at(i).x - radius <0){
+//                double r_small = centers_hx.at(i).x;
+//                circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
+//            }
 
 
-            else if(centers_hx.at(i).x + radius > mon_cols){
-                double r_small = mon_cols - centers_hx.at(i).x;
-                circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
-            }
+//            else if(centers_hx.at(i).x + radius > mon_cols){
+//                double r_small = mon_cols - centers_hx.at(i).x;
+//                circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
+//            }
         }
 
         else{
-            circle(image,centers_hx.at(i), radius-10, Scalar(255,255,255), -1);
+            centers_hx_real.push_back(centers_hx.at(i));
+            //circle(image,centers_hx.at(i), radius-10, Scalar(255,255,255), -1);
         }
     }
-
+    centers_hx.clear();
+    centers_hx=centers_hx_real;
+    for(uint i = 0; i < centers_hx.size(); i++){
+        circle(image,centers_hx.at(i), radius-10, Scalar(0,0,0), -1);
+    }
+    std::cout << radius << std::endl;
  cv::imwrite("imagen1.png", image);
 }
 

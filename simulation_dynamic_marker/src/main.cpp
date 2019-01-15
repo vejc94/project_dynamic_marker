@@ -77,6 +77,7 @@ double projectionError(std::vector<cv::RotatedRect>& list_ell, vpHomogeneousMatr
 
 //simulation of the aruco marker and error calculation
 void arucoSimulation();
+double arucoBoardPoseError(std::vector<std::vector<cv::Point2f>> markerCorners, std::vector<int> markerIds, cv::Ptr<cv::aruco::GridBoard> board, cv::Mat cam_pam, cv::Mat distCoeff, cv::Vec3d rvec, cv::Vec3d tvec, vpHomogeneousMatrix &wMc);
 double arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vector<cv::Vec3d> tvecs, cv::Mat cam_pam, float marker_length, std::vector<std::vector<cv::Point2f>> markerCorners, vpHomogeneousMatrix& wMc);
 
 //for sorting the list of the detected ellipses and the created ellipses
@@ -99,7 +100,7 @@ int main()
     cv::circle(image_cv, cv::Point(image_cv.cols/2, image_cv.rows/2), init_radius, cv::Scalar(0,0,0),-1);//circle draws with BGR Channels
 
     //add Noise
-    //addNoise(image_cv,image_rgb,20);
+    addNoise(image_cv,image_rgb,20);
     //setSPNoise(image_cv,image_rgb,0.01);
 
     cv::cvtColor(image_rgb,image_rgb,CV_BGR2RGBA);
@@ -141,13 +142,13 @@ int main()
     std::vector<cv::RotatedRect> det_ellipses;
 
     ///varying size marker
-    ///circleController controller(530,5);
+    circleController controller(530,5);
 
     ///fixed marker
-    circleController controller(110,110);
+    //circleController controller(110,110);
 
     double error_z;
-    std::string filename = "errors_fm_bw.txt";
+    std::string filename = "error_bla.txt";
     cv::FileStorage fs(filename, cv::FileStorage::WRITE);
 
 
@@ -167,22 +168,22 @@ int main()
             g.acquire(Icamera, cMw, Iimage);
             continue;
         }
+       std::cout<<det_ellipses.at(0).size.width/2<<std::endl;
+        double Radius = controller.calculate(cMw, 80);//r_soll = 80 pixels
 
-        double Radius = controller.calculate(cMw, 50);//r_soll = 80 pixels
-
-        if(Radius>192){
-            squarePacking(image_cv,Radius);
-          //  squarePackingContinous(image_cv,Radius);
-            error_z = projectionError(det_ellipses,wMc,cam,0);
-        }
-        else {
-           hexagonalPacking(image_cv, Radius);
-        //    hexagonalPackingContinous(image_cv, Radius);
+//        if(Radius>192){
+//            squarePacking(image_cv,Radius);
+//          //  squarePackingContinous(image_cv,Radius);
+//            error_z = projectionError(det_ellipses,wMc,cam,0);
+//        }
+//        else {
+//           hexagonalPacking(image_cv, Radius);
+            hexagonalPackingContinous(image_cv, Radius);
             error_z=projectionError(det_ellipses,wMc,cam,1);
-        }
+//        }
         writeError(filename,error_z,wMc);
 
-        //cv::cvtColor(image_cv,image_rgb,CV_BGR2RGBA);
+        cv::cvtColor(image_cv,image_rgb,CV_BGR2RGBA);
 
         cv::namedWindow("monitor",cv::WINDOW_NORMAL);
         cv::imshow("monitor", image_cv);
@@ -193,7 +194,7 @@ int main()
         g.acquire(Icamera, cMw, Iimage);
         vpImageConvert::convert(Icamera,icamera_cv);
 
-        //addNoise(image_cv,image_rgb,20);
+        addNoise(image_cv,image_rgb,20);
         //setSPNoise(image_cv,image_rgb,0.01);
         cv::cvtColor(icamera_cv,icamera_cv,CV_RGBA2BGR);
 
@@ -380,11 +381,27 @@ void arucoSimulation(){
     cv::Mat marker_image;
     cv::Mat marker_image_cv;
     cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(10));
-    cv::aruco::drawMarker(dictionary, 23, 1440, marker_image, 1);
+
+    //image for 1 marker
+    //cv::aruco::drawMarker(dictionary, 23, 1440, marker_image, 1);
+
     cv::Mat marker_image_rgb;///RGBa needed for visp Images. visp doesn't support vpImage<BGR> constructors!
 
+    //parameters for aruco grid board 32 corners = 4x2 markers
+    int markers_x = 4; //Numbers of markers in X direction
+    int markers_y= 2; //Numbers of markers in Y direction
+    float markers_length = 410*0.00018; //markers side lenght in meter (number of pixels * pixel pitch)
+    float markers_gap = 50*0.00018; // Separation between two consecutive markers in the grid in meter (number of pixels * pixel pitch)
+    cv::Vec3d rvec, tvec;
+
+    //create board
+    cv::Ptr<cv::aruco::GridBoard> board = cv::aruco::GridBoard::create(markers_x, markers_y, markers_length, markers_gap, dictionary);
+
+    //image for marker board
+    board->draw(cv::Size(1920,1080), marker_image, 50 , 1);
+
     //add noise
-    //addNoise(marker_image, marker_image_cv,20);
+    addNoise(marker_image, marker_image_cv,20);
     //setSPNoise(marker_image, marker_image_cv,0.01);
     std::vector<int> markerIds;
 
@@ -393,7 +410,7 @@ void arucoSimulation(){
     cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
 
 
-    //cv::cvtColor(marker_image_cv,marker_image_rgb,CV_BGR2RGB);
+    cv::cvtColor(marker_image_cv,marker_image_rgb,CV_BGR2RGB);
 
     //for pose estimation
     cv::Mat distCoeff;
@@ -404,7 +421,12 @@ void arucoSimulation(){
 
     vpImage<vpRGBa> Iimage;//image displayed in the monitor
     vpImage<vpRGBa> Icamera(1024,1280,255); //image projected in the camera
-    vpImageConvert::convert(marker_image,Iimage);
+
+    //whithout noise
+    //vpImageConvert::convert(marker_image,Iimage);
+
+    //with noise
+    vpImageConvert::convert(marker_image_rgb,Iimage);
 
     /// Camera Parameters
     /// 1. p_x = ratio between focal length 'f=5mm' and pixel lenght 'l_x=4,8um'.
@@ -427,7 +449,7 @@ void arucoSimulation(){
     vpHomogeneousMatrix wMc;// world to camera matrix. world coordinates are image coordinates
     wMc=cMw.inverse();
 
-    vpSimulatorCamera robot; //instance of the free flying camera
+    vpSimulatorCamera robot; //instance of the free flying camera markerIds
     robot.setPosition(wMc);
     robot.setSamplingTime(0.006);// Modify the default sampling time to 0.006 second
     robot.setMaxTranslationVelocity(2.);
@@ -437,7 +459,7 @@ void arucoSimulation(){
     v[2]=  0.5; // vz = 0.5 m/s
 
     double error_z;
-    std::string filename = "errors_aruco.txt";
+    std::string filename = "errors_aruco_board.txt";
     //cv::FileStorage fs(filename, cv::FileStorage::WRITE);
 
     for(int i=0;;i++){
@@ -445,22 +467,30 @@ void arucoSimulation(){
         robot.getPosition(wMc);
         cMw=wMc.inverse();
 
-        //detection of the aruco image in the camera
+        //detection of the aruco marker image in the camera
         cv::aruco::detectMarkers(icamera_cv, dictionary, markerCorners, markerIds, parameters, rejectedCandidates,cam_cv);
-        cv::aruco::drawDetectedMarkers(icamera_cv, markerCorners, markerIds);
 
-        //estimate pose
-        error_z =arucoPoseError(distCoeff, rvecs, tvecs, cam_cv, marker_length, markerCorners, wMc);
+        //draw one marker
+        //cv::aruco::drawDetectedMarkers(icamera_cv, markerCorners, markerIds);
 
-        //
+        //estimate pose board
+        error_z = arucoBoardPoseError(markerCorners, markerIds, board, cam_cv, distCoeff, rvec, tvec, wMc);
+
+        //draw axis board
+        cv::aruco::drawAxis(icamera_cv, cam_cv, distCoeff, rvec, tvec, 0.1);
+
+        //estimate pose with one marker
+        //error_z =arucoPoseError(distCoeff, rvecs, tvecs, cam_cv, marker_length, markerCorners, wMc);
+
+        //save error
         writeError(filename,error_z,wMc);
         cv::imshow("image de la camara", icamera_cv);
         cv::waitKey(1);
         vpImageConvert::convert(icamera_cv, Icamera);
 
 
-        if(i == 50)
-            cv::imwrite("noise_image_aruco.png", icamera_cv);
+        if(tvec[2] < 0.8)
+            cv::imwrite("noise_image_aruco_board.png", icamera_cv);
 
         g.acquire(Icamera, cMw, Iimage);
         vpImageConvert::convert(Icamera,icamera_cv);
@@ -505,6 +535,32 @@ double arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vect
 //        fs << "ground-truth Z-Coordinate" << wMc.inverse().getTranslationVector()[2];
     }
     return NAN;
+}
+
+double arucoBoardPoseError(std::vector<std::vector<cv::Point2f>> markerCorners, std::vector<int> markerIds, cv::Ptr<cv::aruco::GridBoard> board, cv::Mat cam_pam, cv::Mat distCoeff, cv::Vec3d rvec, cv::Vec3d tvec, vpHomogeneousMatrix &wMc){
+    //errors of intrinsic parameters
+    double delta_p = 2;
+    double delta_u0 = 3;
+    double delta_v0 = 1.5;
+    static bool camera_error=false;
+    if(!camera_error){
+        cam_pam.at<double>(0,0)+= delta_p;
+        cam_pam.at<double>(1,1)+= delta_p;
+        cam_pam.at<double>(0,2)+= delta_u0;
+        cam_pam.at<double>(1,2)+= delta_v0;
+        camera_error=true;
+    }
+    //rotation matrix of the rotation vector
+    cv::Mat Rmat;
+    int valid = cv::aruco::estimatePoseBoard(markerCorners, markerIds, board, cam_pam, distCoeff, rvec, tvec);
+    if(!valid){
+        return NAN;
+    }
+
+    double error_z= tvec[2] - wMc.inverse().getTranslationVector()[2];
+    std::cout << error_z << std::endl;
+    return error_z;
+
 }
 
 void addNoise(cv::Mat img_src, cv::Mat &img_dst, double stddev){
