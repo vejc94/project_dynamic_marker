@@ -200,7 +200,7 @@ void squarePackingContinous(Mat image, double radius){
 }
 
 void hexagonalPackingContinous(cv::Mat image, double radius){
-    image.setTo(255);
+    image.setTo(0);
     centers_hx.clear();
     centers_hx_real.clear();
     centers_hx.push_back(Point(mon_cols/2,mon_rows/2));
@@ -299,9 +299,9 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
     centers_hx.clear();
     centers_hx=centers_hx_real;
     for(uint i = 0; i < centers_hx.size(); i++){
-        circle(image,centers_hx.at(i), radius-10, Scalar(0,0,0), -1);
+        circle(image,centers_hx.at(i), radius-10, Scalar(255,255,255), -1);
     }
-    std::cout << radius << std::endl;
+
  cv::imwrite("imagen1.png", image);
 }
 
