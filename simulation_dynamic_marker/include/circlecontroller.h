@@ -7,9 +7,13 @@
 class circleController
 {
 public:
-    circleController(int max, int min);
+    circleController(double max, double min);
 
     double calculate(vpHomogeneousMatrix cMw, double r_soll);
+    void setMax(double max);
+    void setMin(double min);
+    double getMax();
+    double getMin();
 private:
 
     double min_; //maximum value of manipulated variable

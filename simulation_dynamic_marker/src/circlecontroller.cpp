@@ -1,6 +1,6 @@
 #include "circlecontroller.h"
 #include <iostream>
-circleController::circleController(int max, int min)
+circleController::circleController(double max, double min)
 {
 max_=max; //maximal size
 min_=min; //minimal size
@@ -28,4 +28,17 @@ double circleController::calculate(vpHomogeneousMatrix cMw, double r_soll){
     }
     return R;
 
+}
+
+void circleController::setMax(double max){
+    max_ = max;
+}
+void circleController::setMin(double min){
+    min_ = min;
+}
+double circleController::getMax(){
+    return max_;
+}
+double circleController::getMin(){
+    return min_;
 }
