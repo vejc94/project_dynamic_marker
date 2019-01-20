@@ -4,6 +4,7 @@ using namespace cv;
 
 int mon_rows = 1080;
 int mon_cols = 1920;
+int gap = 10;
 std::vector<Point> centers_sq;
 std::vector<Point> centers_hx;
 std::vector<Point> centers_hx_real;
@@ -205,6 +206,8 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
     centers_hx_real.clear();
     centers_hx.push_back(Point(mon_cols/2,mon_rows/2));
 
+
+
     //int a = mon_rows/(sqrt(3)*radius);//number of circles in rows
     int b = mon_cols /(2 * radius);//number of circles in columns
 
@@ -219,7 +222,7 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
 
 
             //pushing points
-            if((x1<0)||(x1>mon_cols)||(y1<0||y1>mon_rows)){//checking if center fits in the monitor
+            if((x1-gap<0)||(x1+gap>mon_cols)||(y1-gap<0||y1+gap>mon_rows)){//checking if center fits in the monitor
                continue;
         }
             //mirrored point
@@ -239,7 +242,7 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
             double x2_m = mon_cols - x2;
 
             //pushing points
-            if((x2<0)||(x2>mon_cols)||(y2<0||y2>mon_rows))//checking if center fits in the monitor
+            if((x2-gap<0)||(x2+gap>mon_cols)||(y2-gap<0||y2+gap>mon_rows))//checking if center fits in the monitor
                 continue;
             centers_hx.push_back(Point(x2,y2));
             centers_hx.push_back(Point(x2_m,y2));
@@ -258,18 +261,38 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
             //double x3_m = mon_cols - x3;
             double y3_m = mon_rows - y3;
             //pushing points
-            if((x3<0)||(x3>mon_cols)||(y3<0||y3>mon_rows))//checking if center fits in the monitor
+            if((x3-gap<0)||(x3+gap>mon_cols)||(y3-gap<0||y3+gap>mon_rows))//checking if center fits in the monitor
                 continue;
             centers_hx.push_back(Point(x3,y3));
             centers_hx.push_back(Point(x3,y3_m));
         }
     }
 
+    //check if circles center are more than once in the list
+    for(uint i=0; i<centers_hx.size();i++){
+
+        uint count = 0;
+        for(uint j = 0; j <centers_hx.size();j++){
+
+            double distance = cv::norm(centers_hx.at(i) - centers_hx.at(j));
+
+            if(distance>radius){
+                count++;
+            }
+        }
+        if(count==centers_hx.size()-1){
+            centers_hx_real.push_back(centers_hx.at(i));
+        }
+    }
+
+    centers_hx.clear();
+    centers_hx=centers_hx_real;
+    centers_hx_real.clear();
 
     for(uint i = 0; i < centers_hx.size(); i++){
         ///Checking if the circles with coordinates x, y fits in the display
         /// if not draw circle with an smaller radius.
-        if((centers_hx.at(i).x - radius < 0)||(centers_hx.at(i).y - radius < 0)||(centers_hx.at(i).x + radius > mon_cols)||(centers_hx.at(i).y + radius > mon_rows)){           
+        if((centers_hx.at(i).x - radius - gap < 0)||(centers_hx.at(i).y - radius-gap < 0)||(centers_hx.at(i).x + radius+gap > mon_cols)||(centers_hx.at(i).y + radius+gap > mon_rows)){
 //            if(centers_hx.at(i).y - radius <0){
 //                double r_small = centers_hx.at(i).y;
 //                circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
@@ -298,11 +321,13 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
     }
     centers_hx.clear();
     centers_hx=centers_hx_real;
-    for(uint i = 0; i < centers_hx.size(); i++){
-        circle(image,centers_hx.at(i), radius-10, Scalar(255,255,255), -1);
+    for(uint i = 0; i < centers_hx.size(); i++){       
+        circle(image,centers_hx.at(i), radius-gap, Scalar(255,255,255), -1);
+//        cv::imshow("monda", image);
+//        waitKey(0);
+
     }
 
- cv::imwrite("imagen1.png", image);
 }
 
 std::vector<Point> getCentersHX(){

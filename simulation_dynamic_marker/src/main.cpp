@@ -11,7 +11,7 @@
 #include <visp3/core/vpPixelMeterConversion.h>
 //project
 #include <iostream>
-#include <math.h>
+#include <c++/5/cmath>
 #include "circlecontroller.h"
 #include "circlepacking.h"
 
@@ -74,11 +74,11 @@ void setSPNoise(cv::Mat img_src, cv::Mat &img_dst,double p);
 std::vector<cv::RotatedRect> centerDetector(vpImage<vpRGBa> &I);
 
 //error calculation of the dynamic marker
-double projectionError(std::vector<cv::RotatedRect>& list_ell, vpHomogeneousMatrix& wMc, vpCameraParameters cam, int packing, cv::Vec3d &rvec, cv::Vec3d &tvec);
+double projectionError(std::vector<cv::RotatedRect>& list_ell, vpCameraParameters cam, int packing, cv::Vec3d &rvec, cv::Vec3d &tvec);
 
 //simulation of the aruco marker and error calculation
 void arucoSimulation();
-double arucoBoardPoseError(std::vector<std::vector<cv::Point2f>> markerCorners, std::vector<int> markerIds, cv::Ptr<cv::aruco::GridBoard> board, cv::Mat cam_pam, cv::Mat distCoeff, cv::Vec3d &rvec, cv::Vec3d &tvec, vpHomogeneousMatrix &wMc);
+double arucoBoardPoseError(std::vector<std::vector<cv::Point2f>> markerCorners, std::vector<int> markerIds, cv::Ptr<cv::aruco::GridBoard> board, cv::Mat cam_pam, cv::Mat distCoeff, cv::Vec3d &rvec, cv::Vec3d &tvec);
 double arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vector<cv::Vec3d> tvecs, cv::Mat cam_pam, float marker_length, std::vector<std::vector<cv::Point2f>> markerCorners, vpHomogeneousMatrix& wMc);
 
 //for sorting the list of the detected ellipses and the created ellipses
@@ -101,10 +101,16 @@ double translationError(cv::Vec3d t_est, vpHomogeneousMatrix &wMc);
 //error calculation rotation vector
 double rotationError(cv::Vec3d r_est, vpHomogeneousMatrix &wMc);
 
+//tranform coordinate frames
+void tranformCoordinatesAruco(cv::Vec3d &t_w, cv::Vec3d &r_w, cv::Ptr<cv::aruco::GridBoard> board, vpHomogeneousMatrix &wMc, vpHomogeneousMatrix &wMc2);
+
 int main()
 {
     //Simulation with aruco marker
-    //arucoSimulation();
+
+     //   arucoSimulation();
+
+
 
     //initial position of the camera
     double x, y, z;
@@ -112,9 +118,12 @@ int main()
     //roll, pitch, yaw
     double phi, theta, psi;
 
+    //speed in z
+    double v_z;
+
     std::cout << "choose the initial translation vector [x, y, z] of the camera in meter:" << std::endl;
     std::cin >> x >> y >> z;
-    if(z < 0) {
+    if(z < 0.) {
         std::cout << "invalid z value" << std::endl;
         return 0;
     }
@@ -124,9 +133,10 @@ int main()
         std::cout << "invalid angles" << std::endl;
         return 0;
     }
+    std::cout << "choose velocity in z:" << std::endl;
+    std::cin >> v_z;
 
-
-    for(int j = 0; j < 20; j++){
+    //for(int j = 0; j < 3; j++){
         ///create initializing image
         double init_radius = 200; //radius in pixels
         cv::Mat image_cv = cv::Mat(1080,1920,CV_8UC3,cv::Scalar(0,0,0)); //BGR Channels
@@ -171,25 +181,28 @@ int main()
         robot.setMaxRotationVelocity(vpMath::rad(90));
         vpColVector v(6);
 
-        v[2]=  0.5; // vz = 0.5 m/s
+        v[2]= v_z;//  0.5;// m/s
 
         std::vector<cv::RotatedRect> det_ellipses;
 
         ///varying size marker
-        circleController controller(510,5);
+        circleController controller(520,5);
 
         ///fixed marker
         //circleController controller(110,110);
 
         double error_T;
         double error_R;
-        std::string filename_R = "error_blyat_R.txt";
-        std::string filename_T = "error_ blyat_T.txt";
-
-
+        std::string filename_R = "monda_R.txt";
+        std::string filename_T = "error_verga_T.txt";
 
         //For pose estimation with conics
-        cv::Vec3d rvec, tvec;
+        cv::Vec3d rvec, tvec, tvec_last;
+
+        tvec_last(2)=z;
+
+        double diff;
+        double Radius;
 
         bool loop = true;
         while(loop){
@@ -209,17 +222,28 @@ int main()
                 continue;
             }
 
-            double Radius = controller.calculate(cMw, 50);//r_soll = 80 pixels
+            //double Radius = controller.calculate(cMw, 50);//r_soll = 80 pixels
+
+            diff = fabs(tvec(2) - tvec_last(2))/tvec(2);
+            if(diff >= 0.5){ //10 pixels is gap between circles
+                Radius = controller.calculate(tvec_last, 50);
+            }
+            else{
+                Radius = controller.calculate(tvec, 50);
+                tvec_last = tvec;
+            }
 
             if(Radius>192){
                 //pose estimation with 6 circles
-                //            squarePacking(image_cv,270);//Radius = 270 to display 6 circles
-                //            error_z = projectionError(det_ellipses,wMc,cam,0);
+                            squarePacking(image_cv,270);//Radius = 270 to display 6 circles
+                            projectionError(det_ellipses,cam,0, rvec, tvec);
 
                 //pose estimation with conics
-                Radius = controller.calculate(cMw, 540);
-                squarePacking(image_cv,Radius);
-                PoseConics(det_ellipses,cam, rvec, tvec, wMc, Radius);
+//                Radius = controller.calculate(cMw, 540);
+//                squarePacking(image_cv,Radius);
+//                PoseConics(det_ellipses,cam, rvec, tvec, wMc, Radius);
+
+                  //error calculation
                 error_T = translationError(tvec, wMc);
                 error_R = rotationError(rvec, wMc);
             }
@@ -228,7 +252,7 @@ int main()
                 hexagonalPackingContinous(image_cv, Radius);
 
                 //pose estimation with 4 or more circles
-                projectionError(det_ellipses,wMc,cam,1,rvec,tvec);
+                projectionError(det_ellipses,cam,1,rvec,tvec);
 
                 error_T = translationError(tvec, wMc);
                 error_R = rotationError(rvec, wMc);
@@ -265,7 +289,7 @@ int main()
                 loop = false;
         }
 
-    }
+   // }
 
     return 0;
 
@@ -311,7 +335,8 @@ std::vector<cv::RotatedRect> centerDetector(vpImage<vpRGBa> &I){
     return det_ellipses;
 }
 
-double projectionError(std::vector<cv::RotatedRect>& list_ell, vpHomogeneousMatrix& wMc, vpCameraParameters cam, int packing, cv::Vec3d &rvec, cv::Vec3d &tvec){
+double projectionError(std::vector<cv::RotatedRect>& list_ell, vpCameraParameters cam, int packing, cv::Vec3d &rvec, cv::Vec3d &tvec){
+
     if(list_ell.empty() && (getCentersSQ().empty()||getCentersHX().empty())) return NAN;
 
     std::vector<cv::Point> list_centers;
@@ -319,8 +344,11 @@ double projectionError(std::vector<cv::RotatedRect>& list_ell, vpHomogeneousMatr
     else if(packing == 1) list_centers = getCentersHX();
     else{std::cout << "invalid type of packing" << std::endl;}
 
-    if(list_ell.size()!=list_centers.size()) return NAN;
-
+    if(list_ell.size()!=list_centers.size()){
+          std::cout << "number of detected ellipses: " <<list_ell.size() << std::endl;
+          std::cout << "number of ellipses: "<<list_centers.size()<<std::endl;
+        return NAN;
+    }
     std::vector<cv::Point2f> list_det_centers;
     std::vector<float> list_errors;
 
@@ -372,12 +400,15 @@ double projectionError(std::vector<cv::RotatedRect>& list_ell, vpHomogeneousMatr
 
     cv::Mat r_est, t_est, Rmat; // rotation, translation vector and rotation matrix
     if( (list_det_centers.size() > 3)) {
+        //std::cout << "i am here" << std::endl;
         cv::solvePnP(objectPoints,imagePoints,cam_cv, std::vector<int>(0), r_est, t_est);
         cv::Rodrigues(rvec, Rmat);
         rvec = r_est;
         tvec = t_est;
-        std::cout << "esimated r: " << Rmat << std::endl;
-        std::cout << "real r: " << wMc.getRotationMatrix() << std::endl;
+//        std::cout << "estimated t: "<<t_est << std::endl;
+//        std::cout << "real t: " << wMc.inverse().getTranslationVector() << std::endl;
+//        std::cout << "esimated r: " << rvec << std::endl;
+//        std::cout << "real r: " << wMc.inverse().getThetaUVector() << std::endl;
         //std::cout << tvec(2) - wMc.inverse().getTranslationVector()[2] << std::endl;
     }
 
@@ -434,26 +465,32 @@ double projectionError(std::vector<cv::RotatedRect>& list_ell, vpHomogeneousMatr
 }
 
 void arucoSimulation(){
-    //initial position of the camera
-    double x, y, z;
+//    //initial position of the camera
+//    double x, y, z;
 
-    //roll, pitch, yaw
-    double phi, theta, psi;
+//    //roll, pitch, yaw
+//    double phi, theta, psi;
 
-    std::cout << "choose the initial translation vector [x, y, z] of the camera in meter:" << std::endl;
-    std::cin >> x >> y >> z;
-    if(abs(z) < 0.25) {
-        std::cout << "invalid z value" << std::endl;
-        return;
-    }
-    std::cout << "choose the initial rotation vector [phi, theta, psi] of the camera in degree:" << std::endl;
-    std::cin >> phi >> theta >> psi;
-    if(abs(psi)>90 ||(abs(theta)>90)||(abs(phi)>90)){
-        std::cout << "invalid angles" << std::endl;
-        return;
-    }
+//    //velocity z
+//    double v_z;
 
-    for(int i = 0; i < 20; i++ ){
+//    std::cout << "choose the initial translation vector [x, y, z] of the camera in meter:" << std::endl;
+//    std::cin >> x >> y >> z;
+//    if(z < 0.3) {
+//        std::cout << "invalid z value" << std::endl;
+//        return;
+//    }
+//    std::cout << "choose the initial rotation vector [phi, theta, psi] of the camera in degree:" << std::endl;
+//    std::cin >> phi >> theta >> psi;
+//    if(abs(psi)>90 ||(abs(theta)>90)||(abs(phi)>90)){
+//        std::cout << "invalid angles" << std::endl;
+//        return;
+//    }
+//    std::cout << "choose velocity in z:" << std::endl;
+//    std::cin >> v_z;
+
+
+//        std::cout << i << std::endl;
         //creating aruco marker image
         cv::Mat marker_image;
         cv::Mat marker_image_cv;
@@ -479,6 +516,7 @@ void arucoSimulation(){
 
         //add noise
         addNoise(marker_image, marker_image_cv,20);
+
         //setSPNoise(marker_image, marker_image_cv,0.01);
         std::vector<int> markerIds;
 
@@ -513,9 +551,8 @@ void arucoSimulation(){
         vpCameraParameters cam(1083, 1083, Icamera.getWidth()/2, Icamera.getHeight()/2);
         cv::Mat cam_cv = (cv::Mat1d(3, 3) << cam.get_px(), 0, cam.get_u0(), 0, cam.get_py(), cam.get_v0(), 0, 0, 1); //camera matrix opencv
 
-        vpHomogeneousMatrix cMw(x, y, z, vpMath::rad(phi), vpMath::rad(theta), vpMath::rad(psi)); //  camera coordinates to world(image) coordinates
-
-        vpHomogeneousMatrix aMw;//Matrix to convert from aruco coordinate frame to world coordinate frame
+        vpHomogeneousMatrix cMw(0, 0, 3, vpMath::rad(0), vpMath::rad(0), vpMath::rad(0)); //  camera coordinates to world(image) coordinates
+        vpHomogeneousMatrix cMw_i(0, 0, 3, vpMath::rad(0), vpMath::rad(0), vpMath::rad(0));//to restart
 
         vpVirtualGrabber g(Iimage, cam); // Initialize image simulator
         g.acquire(Icamera,cMw,Iimage);//acquire image projection with camera position wrt world coordinates
@@ -527,24 +564,24 @@ void arucoSimulation(){
 
 
         vpHomogeneousMatrix wMc;// world to camera matrix. world coordinates are image coordinates
-        wMc=cMw.inverse();
-
         vpSimulatorCamera robot; //instance of the free flying camera markerIds
-        robot.setPosition(wMc);
         robot.setSamplingTime(0.006);// Modify the default sampling time to 0.006 second
         robot.setMaxTranslationVelocity(2.);
         robot.setMaxRotationVelocity(vpMath::rad(90));
         vpColVector v(6);
 
-        v[2]=  0.5; // vz = 0.5 m/s
-
         //errors
         double error_T;
         double error_R;
-        std::string filename_R = "error_blyat_R.txt";
-        std::string filename_T = "error_ blyat_T.txt";
+        std::string filename_R = "error_board_R.txt";
+        std::string filename_T = "error_board_T.txt";
 
-        //cv::FileStorage fs(filename, cv::FileStorage::WRITE);
+        for(int i = 0; i < 4; i++ ){
+        wMc=cMw_i.inverse();
+        robot.setPosition(wMc);
+
+
+        v[2]= 0.5;// v_z; // vz = 0.5 m/s
 
         bool loop = true;
         while(loop){
@@ -562,24 +599,26 @@ void arucoSimulation(){
             //error_z =arucoPoseError(distCoeff, rvecs, tvecs, cam_cv, marker_length, markerCorners, wMc);
 
             //estimate pose board
-            arucoBoardPoseError(markerCorners, markerIds, board, cam_cv, distCoeff, rvec, tvec, wMc);
+            arucoBoardPoseError(markerCorners, markerIds, board, cam_cv, distCoeff, rvec, tvec);
 
-            //vpHomogeneousMatrix wMc2;
-            //boardWorldTransform(rvec, tvec, cMw, aMw, wMc2);
+            //to transform world and aruco frames
+            cv::Vec3d r_w, t_w;
+            vpHomogeneousMatrix wMc_2;
+            tranformCoordinatesAruco(t_w, r_w, board, wMc, wMc_2);
 
 
-            error_R= rotationError(rvec,wMc);
-            error_T= translationError(tvec,wMc);
+            error_R= rotationError(rvec,wMc_2);
+            error_T= translationError(tvec,wMc_2);
 
 
             //draw axis board
-            cv::aruco::drawAxis(icamera_cv, cam_cv, distCoeff, rvec, tvec, 0.1);
+           // cv::aruco::drawAxis(icamera_cv, cam_cv, distCoeff, rvec, tvec, 0.1);
 
             //save error
             writeError(filename_T,error_T,wMc);
             writeError(filename_R,error_R,wMc);
-            cv::imshow("image de la camara", icamera_cv);
-            cv::waitKey(1);
+//            cv::imshow("image de la camara", icamera_cv);
+//            cv::waitKey(1);
             vpImageConvert::convert(icamera_cv, Icamera);
 
             //add noise
@@ -595,8 +634,6 @@ void arucoSimulation(){
                 loop = false;
         }
     }
-    //fs.release();
-
 }
 
 double arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vector<cv::Vec3d> tvecs, cv::Mat cam_pam, float marker_length, std::vector<std::vector<cv::Point2f>> markerCorners, vpHomogeneousMatrix &wMc){
@@ -636,7 +673,7 @@ double arucoPoseError(cv::Mat distCoeff, std::vector<cv::Vec3d> rvecs, std::vect
     return NAN;
 }
 
-double arucoBoardPoseError(std::vector<std::vector<cv::Point2f>> markerCorners, std::vector<int> markerIds, cv::Ptr<cv::aruco::GridBoard> board, cv::Mat cam_pam, cv::Mat distCoeff, cv::Vec3d &rvec, cv::Vec3d &tvec, vpHomogeneousMatrix &wMc){
+double arucoBoardPoseError(std::vector<std::vector<cv::Point2f>> markerCorners, std::vector<int> markerIds, cv::Ptr<cv::aruco::GridBoard> board, cv::Mat cam_pam, cv::Mat distCoeff, cv::Vec3d &rvec, cv::Vec3d &tvec){
     //errors of intrinsic parameters
     double delta_p = 2;
     double delta_u0 = 3;
@@ -661,6 +698,8 @@ double arucoBoardPoseError(std::vector<std::vector<cv::Point2f>> markerCorners, 
 }
 
 void addNoise(cv::Mat img_src, cv::Mat &img_dst, double stddev){
+    cv::theRNG().state = cv::getTickCount();
+    //cv::setRNGSeed(cv::getTickCount());
     cv::Mat img_src16;
     if(img_src.channels()==1){
         cv::cvtColor(img_src, img_src16, CV_GRAY2BGR);
@@ -677,33 +716,6 @@ void addNoise(cv::Mat img_src, cv::Mat &img_dst, double stddev){
 
 }
 
-void setSPNoise(cv::Mat img_src, cv::Mat &img_dst, double p){
-    cv::Mat img_src16;
-    if(img_src.channels()==1){
-        cv::cvtColor(img_src, img_src16, CV_GRAY2BGR);
-        img_src16.convertTo(img_src16, CV_16SC3);
-    }
-    else
-        img_src.convertTo(img_src16, CV_16SC3);
-
-    //random number generator for pseudo uniform distributed random variables
-    cv::RNG x(cv::getTickCount());
-
-    for(int i = 0;i<1080; i++){
-        for(int j = 0; j<1920; j++){
-            float s_p = x.uniform(0.00,1.00);
-            if(s_p<p/2)
-                img_src16.at<char>(i,j)=255;
-
-            else if(s_p>1-p/2)
-                img_src16.at<char>(i,j)=0;
-        }
-    }
-    //    cv::imshow("prueba",temp_img);
-    //    cv::waitKey(0);
-
-    img_src16.convertTo(img_dst,img_src.type());
-}
 
 //sort contours in descending order of area.
 bool contourAreaComparator(std::vector<cv::Point> contour1, std::vector<cv::Point> contour2){
@@ -734,7 +746,7 @@ bool centerListComparator2(cv::Point point1, cv::Point point2){
     if(i==j){
         double k = point1.x;
         double l = point2.x;
-        return (k > l) ;
+        return (k < l) ;
     }
     else{
         return (i < j);
@@ -780,11 +792,6 @@ double PoseConics(std::vector<cv::RotatedRect> det_ell, vpCameraParameters cam_p
 
     //calculate the major axis
     //endpoints in image coords
-    //        sx1 = circle.x + circle.v0 * circle.m0 * 2;
-    //        sx2 = circle.x - circle.v0 * circle.m0 * 2;
-    //        sy1 = circle.y + circle.v1 * circle.m0 * 2;
-    //        sy2 = circle.y - circle.v1 * circle.m0 * 2;
-
     sx1 = circle.center.x + circle_v0 * circle_m0 * 2;
     sx2 = circle.center.x - circle_v0 * circle_m0 * 2;
     sy1 = circle.center.y + circle_v1 * circle_m0 * 2;
@@ -802,11 +809,6 @@ double PoseConics(std::vector<cv::RotatedRect> det_ell, vpCameraParameters cam_p
 
     //calculate the minor axis
     //endpoints in image coords
-    //       sx1 = circle.x + circle.v1 * circle.m1 * 2;
-    //       sx2 = circle.x - circle.v1 * circle.m1 * 2;
-    //       sy1 = circle.y - circle.v0 * circle.m1 * 2;
-    //       sy2 = circle.y + circle.v0 * circle.m1 * 2;
-
     sx1 = circle.center.x + circle_v1 * circle_m1 * 2;
     sx2 = circle.center.x - circle_v1 * circle_m1 * 2;
     sy1 = circle.center.y - circle_v0 * circle_m1 * 2;
@@ -857,12 +859,10 @@ double PoseConics(std::vector<cv::RotatedRect> det_ell, vpCameraParameters cam_p
     rvec(0)= atan2(rvec(1), rvec(0));
     rvec(2)= 0; /* not recoverabel */
 
-    double error_z = tvec(2) - wMc.inverse().getTranslationVector()[2];
+    std::cout <<"estimated t: "<< tvec << std::endl;
+    std::cout << "real t: " << wMc.getTranslationVector()<< std::endl;
 
-    //    std::cout << "estimation: "<< tvec << std::endl;
-    //    std::cout << "ground_truth: "<< wMc.inverse().getTranslationVector() << std::endl;
-    //std::cout << error_z << std::endl;
-    return error_z;
+    return 0;
 }
 
 double translationError(cv::Vec3d t_est, vpHomogeneousMatrix &wMc){
@@ -874,7 +874,11 @@ double translationError(cv::Vec3d t_est, vpHomogeneousMatrix &wMc){
     double z = pow(t_real[2]-t_est(2),2);
 
     double error = sqrt(x+y+z)/sqrt(t_real[0]*t_real[0] + t_real[1]*t_real[1] + t_real[2]*t_real[2]);
-    //std::cout << error*100 << std::endl;
+
+    std::cout << "t real: " << t_real << std::endl;
+    std::cout << "t estimated: " << t_est << std::endl;
+
+    std::cout <<"error = "<< error*100 << std::endl;
     return error*100;
 }
 
@@ -887,9 +891,6 @@ double rotationError(cv::Vec3d r_est, vpHomogeneousMatrix &wMc){
     cv::Mat R_res = cv::Mat::zeros(3,3, CV_64F);
 
 
-//    std::cout << "r_est: "<<r_est << std::endl;
-//    std::cout << "r_real: "<<wMc.getThetaUVector() << std::endl;
-
     for(int i = 0; i < 3; i++){
         for(int j = 0; j < 3; j++){
             for(int k = 0; k < 3; k++){
@@ -901,7 +902,25 @@ double rotationError(cv::Vec3d r_est, vpHomogeneousMatrix &wMc){
 
     cv::Rodrigues(R_res, r_res);
     double angle = cv::norm(r_res,cv::NORM_L2);//rad
-//    std::cout <<"angle = " <<angle*180/M_PI << std::endl;
+
+    //std::cout <<"angle = " <<angle*180/M_PI << std::endl;
     return angle*180/M_PI;
+
+}
+
+void tranformCoordinatesAruco(cv::Vec3d &t_w, cv::Vec3d &r_w, cv::Ptr<cv::aruco::GridBoard> board, vpHomogeneousMatrix &wMc, vpHomogeneousMatrix &wMc2){
+    //marker length parameters
+    double length =  board->getMarkerLength();
+    double gap = board->getMarkerSeparation();
+
+
+    vpHomogeneousMatrix wMa = vpHomogeneousMatrix(-2*length-1.5*gap, length+gap/2, 0, vpMath::rad(180),vpMath::rad(0),vpMath::rad(0));
+
+    wMc2 = wMa*wMc;
+    vpTranslationVector t2 = wMc2.getTranslationVector();
+    vpRotationVector r2 = wMc2.getThetaUVector();
+
+    t_w(0) = t2[0]; t_w(1) = t2[1]; t_w(2) = t2[2];
+    r_w(0) = r2[0];r_w(2) = r2[2];r_w(2) = r2[2];
 
 }
