@@ -293,38 +293,16 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
         ///Checking if the circles with coordinates x, y fits in the display
         /// if not draw circle with an smaller radius.
         if((centers_hx.at(i).x - radius - gap < 0)||(centers_hx.at(i).y - radius-gap < 0)||(centers_hx.at(i).x + radius+gap > mon_cols)||(centers_hx.at(i).y + radius+gap > mon_rows)){
-//            if(centers_hx.at(i).y - radius <0){
-//                double r_small = centers_hx.at(i).y;
-//                circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
-//            }
-//            else if(centers_hx.at(i).y + radius > mon_rows){
-
-//                double r_small = mon_rows - centers_hx.at(i).y;
-//                circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
-//            }
-//            else if(centers_hx.at(i).x - radius <0){
-//                double r_small = centers_hx.at(i).x;
-//                circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
-//            }
-
-
-//            else if(centers_hx.at(i).x + radius > mon_cols){
-//                double r_small = mon_cols - centers_hx.at(i).x;
-//                circle(image,centers_hx.at(i), r_small - r_small/5, Scalar(255,255,255), -1);
-//            }
         }
 
         else{
             centers_hx_real.push_back(centers_hx.at(i));
-            //circle(image,centers_hx.at(i), radius-10, Scalar(255,255,255), -1);
-        }
+             }
     }
     centers_hx.clear();
     centers_hx=centers_hx_real;
     for(uint i = 0; i < centers_hx.size(); i++){       
         circle(image,centers_hx.at(i), radius-gap, Scalar(255,255,255), -1);
-//        cv::imshow("monda", image);
-//        waitKey(0);
 
     }
 
