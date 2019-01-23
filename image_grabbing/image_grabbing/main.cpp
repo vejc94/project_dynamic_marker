@@ -18,6 +18,10 @@ using namespace FlyCapture2;
 
 //desired projected radius on the camera.
 double r_soll = 50;
+int mon_rows = 1080;
+int mon_cols = 1920;
+int gap = 10;
+double pixel_pitch =  0.000311;//monitor flo
 
 std::vector<cv::RotatedRect> det_ellipses;//list of ellipses in the image
 cv::Mat cam = cv::Mat::zeros(3,3, CV_32F);//camera intrinsic parameters
@@ -90,7 +94,9 @@ int main()
 
     //reading camera instrinsic matrix
     readCameraParameters();
-    std::cout << cam << std::endl;
+    std::cout << distCoeff << std::endl;
+
+
     //input for distance
     double z;
     std::cout << "distance z: " << std::endl;
@@ -98,6 +104,7 @@ int main()
 
     //calculate Radius of the displayed circles on the monitor
     double Radius = controller.calculate(z, r_soll, cam);
+    std::cout << "circle radius: " <<Radius << std::endl;
 
     if(cam.empty())
     {
@@ -133,6 +140,9 @@ int main()
         cv::Mat image = cv::Mat(rgbImage.GetRows(), rgbImage.GetCols(), CV_8UC3, rgbImage.GetData(),rowBytes);
 
         switch (marker) {
+        case 'a':
+            estimatePoseArucoMarker(image ,distCoeff, rvec, tvec, cam);
+            break;
         case 'b':
             estimatePoseArucoBoard(image, cam, distCoeff, rvec, tvec);
             break;
@@ -145,9 +155,9 @@ int main()
             if(Radius>190)
             {
 
-                hexagonalPackingContinous(520);//one conic
+                squarePacking(520);//one conic
                 //pose estimation conic
-                estimatePosePNP(det_ellipses, cam, 1, rvec, tvec);
+                PoseConics(det_ellipses, cam, rvec, tvec, Radius);
             }
             else
             {

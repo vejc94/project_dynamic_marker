@@ -71,15 +71,15 @@ int main(int argc, char **argv)
     window.showFullScreen();
     //window.show();
 
-//    ///varying size marker
-//    circleController controller(520,5);
-//    ///fixed marker
-//    //circleController controller(110,110);
+    ///varying size marker
+    circleController controller(520,5);
+    ///fixed marker
+    //circleController controller(110,110);
 
-//    std::cout<< "give distance z"<< std::endl;
-//    std::cin >> z;
-//    Radius = controller.calculate(z,r_soll);
-
+    std::cout<< "give distance z"<< std::endl;
+    std::cin >> z;
+    Radius = controller.calculate(z,r_soll);
+    std::cout << "actual radius" << Radius << std::endl;
 
     /// app.exec() launches the event loop, loop that waits for user input in gui application
     /// the event loop is running and waiting for events.
@@ -104,23 +104,23 @@ void ImageDisplayWindow::drawAruco(){
     cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(10));
 
     //draw one marker
-//    cv::aruco::drawMarker(dictionary, 23, 1080, marker_image, 1);
-//    cv::imwrite("aruco_marker.png", marker_image);
+    cv::aruco::drawMarker(dictionary, 23, 1000, marker_image, 1);
+    cv::imwrite("aruco_marker.png", marker_image);
 
     //create board
     //parameters for aruco grid board 32 corners = 4x2 markers
-    int markers_x = 4; //Numbers of markers in X direction
-    int markers_y= 2; //Numbers of markers in Y direction
-    float markers_length = 410*0.000375; //markers side lenght in meter (number of pixels * pixel pitch)
-    float markers_gap = 50*0.000375; // Separation between two consecutive markers in the grid in meter (number of pixels * pixel pitch)
-    cv::Ptr<cv::aruco::GridBoard> board = cv::aruco::GridBoard::create(markers_x, markers_y, markers_length, markers_gap, dictionary);
+//    int markers_x = 4; //Numbers of markers in X direction
+//    int markers_y= 2; //Numbers of markers in Y direction
+//    float markers_length = 410*0.000375; //markers side lenght in meter (number of pixels * pixel pitch)
+//    float markers_gap = 50*0.000375; // Separation between two consecutive markers in the grid in meter (number of pixels * pixel pitch)
+//    cv::Ptr<cv::aruco::GridBoard> board = cv::aruco::GridBoard::create(markers_x, markers_y, markers_length, markers_gap, dictionary);
 
-    //image for marker board
-    board->draw(cv::Size(1920,1080), marker_image, 50 , 1);
-    cv::imwrite("aruco_board.png", marker_image);
+//    //image for marker board
+//    board->draw(cv::Size(1920,1080), marker_image, 50 , 1);
+//    cv::imwrite("aruco_board.png", marker_image);
 
 
-    QImage q_image = QImage(QString::fromStdString("aruco_board.png"));
+    QImage q_image = QImage(QString::fromStdString("aruco_marker.png"));
     q_image.bits();
 
 
@@ -147,66 +147,16 @@ void drawCircle(float x, float y, float radius, float r, float g, float b)
  * With this render function the aruco marker and the aruco board are displayed!
 */
 
-void ImageDisplayWindow::render(){
-    glViewport(0,0,1920,1080);
-    glClearColor(1,1,1,1);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glEnable(GL_TEXTURE_2D);
-
-    //draw Aruco
-    drawAruco();
-    texture->bind();
-
-    //Projectionstransformation
-    // These next lines are needed to display 3D figures as 2D.
-    // glOrtho with these paremeters allows you to draw using directly screen coordinates
-    // origin of the coordinate system on the top left corner of the image (as in OpenCV)
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glViewport(0, 0, width(), height());
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    //for rendering one marker
-//    glOrtho(0.0f, 1920, 0.0, 1080, -1.0f, 1.0f);
-//    glBegin(GL_QUADS);
-//          glTexCoord2f(0,0);
-//          glVertex2f(420, 0);
-//          glTexCoord2f(1,0);
-//          glVertex2f(1500, 0);
-//          glTexCoord2f(1,1);
-//          glVertex2f(1500, 1080);
-//          glTexCoord2f(0,1);
-//          glVertex2f(420, 1080);
-//     glEnd();
-
-    //for rendering a board
-    glBegin(GL_QUADS);
-    glTexCoord2f(0,0);
-          glVertex2f(-1.0f, -1.0f);
-          glTexCoord2f(1,0);
-          glVertex2f(1.0f, -1.0f);
-          glTexCoord2f(1,1);
-          glVertex2f(1.0f, 1.0f);
-          glTexCoord2f(0,1);
-    glVertex2f(-1.0f, 1.0f);
-    glEnd();
-
-    glPopMatrix();
-      glMatrixMode(GL_PROJECTION);
-      glPopMatrix();
-      glMatrixMode(GL_MODELVIEW);
-
-    glDisable(GL_TEXTURE_2D);
-}
-
-/*
- * With this render function the circles are displayed!
-*/
 //void ImageDisplayWindow::render(){
-//    //glClearColor(0,0,0,1);
+//    glViewport(0,0,1920,1080);
+//    glClearColor(1,1,1,1);
 //    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+//    glEnable(GL_TEXTURE_2D);
+
+//    //draw Aruco
+//    drawAruco();
+//    texture->bind();
 
 //    //Projectionstransformation
 //    // These next lines are needed to display 3D figures as 2D.
@@ -217,20 +167,70 @@ void ImageDisplayWindow::render(){
 //    glViewport(0, 0, width(), height());
 //    glMatrixMode(GL_MODELVIEW);
 //    glLoadIdentity();
-//    glOrtho(0.0f, width(), height(), 0.0f, -1.0f, 1.0f);
 
+//    //for rendering one marker
+//    glOrtho(0.0f, 1920, 0.0, 1080, -1.0f, 1.0f);
+//    glBegin(GL_QUADS);
+//          glTexCoord2f(0,0);
+//          glVertex2f(380, 40);
+//          glTexCoord2f(1,0);
+//          glVertex2f(1460, 40);
+//          glTexCoord2f(1,1);
+//          glVertex2f(1460, 1040);
+//          glTexCoord2f(0,1);
+//          glVertex2f(380, 1040);
+//     glEnd();
 
-//    // Here you draw the circles
+//    //for rendering a board
+////    glBegin(GL_QUADS);
+////    glTexCoord2f(0,0);
+////          glVertex2f(-1.0f, -1.0f);
+////          glTexCoord2f(1,0);
+////          glVertex2f(1.0f, -1.0f);
+////          glTexCoord2f(1,1);
+////          glVertex2f(1.0f, 1.0f);
+////          glTexCoord2f(0,1);
+////    glVertex2f(-1.0f, 1.0f);
+////    glEnd();
 
-////     hexagonalPackingContinous(Radius);
+//    glPopMatrix();
+//      glMatrixMode(GL_PROJECTION);
+//      glPopMatrix();
+//      glMatrixMode(GL_MODELVIEW);
 
-//    if(Radius > 190){//190 is the maximal radius to display a hexagon
-//      //squarePacking(270);//Radius = 270 to display 6 circles
-//      hexagonalPackingContinous(520);//one conic
-//    }
-//    else hexagonalPackingContinous(Radius);
-
+//    glDisable(GL_TEXTURE_2D);
 //}
+
+/*
+ * With this render function the circles are displayed!
+*/
+void ImageDisplayWindow::render(){
+    //glClearColor(0,0,0,1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    //Projectionstransformation
+    // These next lines are needed to display 3D figures as 2D.
+    // glOrtho with these paremeters allows you to draw using directly screen coordinates
+    // origin of the coordinate system on the top left corner of the image (as in OpenCV)
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glViewport(0, 0, width(), height());
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glOrtho(0.0f, width(), height(), 0.0f, -1.0f, 1.0f);
+
+
+    // Here you draw the circles
+
+//     hexagonalPackingContinous(Radius);
+
+    if(Radius > 190){//190 is the maximal radius to display a hexagon
+      //squarePacking(270);//Radius = 270 to display 6 circles
+      squarePacking(520);//one conic
+    }
+    else hexagonalPackingContinous(Radius);
+
+}
 
 
 

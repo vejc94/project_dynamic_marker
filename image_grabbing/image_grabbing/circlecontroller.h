@@ -17,4 +17,5 @@ private:
     double max_; //minimum value of manipulated variable
 };
 
+extern double pixel_pitch;
 #endif // CIRCLECONTROLLER_H

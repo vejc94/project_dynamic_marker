@@ -15,11 +15,10 @@ double circleController::calculate(double tz, double r_soll, cv::Mat cam){
 
     double kl_x = 0.00000375;//point grey camera
     //double ml_x =  0.00018;//mi monitor
-    double ml_x =  0.000311;//monitor flo
 
     float f = cam.at<float>(0,0)*kl_x;
 
-    double R = (r_soll*kl_x*tz)/(f*ml_x);
+    double R = (r_soll*kl_x*tz)/(f*pixel_pitch);
     if(R>max_){
         R=max_;
     }
