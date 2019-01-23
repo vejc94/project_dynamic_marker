@@ -5,6 +5,7 @@ CONFIG += c++11 console
 
 SOURCES += main.cpp \
     openglwindow.cpp \
+    circlecontroller.cpp
 
 
 
@@ -13,5 +14,6 @@ LIBS += -L/opt/ros/kinetic/lib/x86_64-linux-gnu -lopencv_core3 -lopencv_imgcodec
 
 HEADERS += \
     openglwindow.h \
+    circlecontroller.h
 
 

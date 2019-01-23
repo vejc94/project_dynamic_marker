@@ -1,5 +1,8 @@
 //Own files
 #include "center_detector.h"
+#include "circlecontroller.h"
+#include "circlepacking.h"
+#include "pose_estimation.h"
 
 //Camera files
 #include <flycapture/FlyCapture2.h>
@@ -13,9 +16,16 @@
 
 using namespace FlyCapture2;
 
+//desired projected radius on the camera.
+double r_soll = 50;
 
 std::vector<cv::RotatedRect> det_ellipses;//list of ellipses in the image
 cv::Mat cam = cv::Mat::zeros(3,3, CV_32F);//camera intrinsic parameters
+cv::Vec3d tvec, rvec;//translation and rotation vectors
+
+//
+circleController controller(520,5);//varying size marker
+//circleController controller(110,110);//fixed marker
 
 //absolut path to file
 std::string filename = "/home/victor94/project_dynamic_marker/image_grabbing/image_grabbing/camera_parameters.yaml";
@@ -76,13 +86,24 @@ int main()
         return false;
     }
 
+    //reading camera instrinsic matrix
     readCameraParameters(cam);
+    std::cout << cam << std::endl;
+    //input for distance
+    double z;
+    std::cout << "distance z: " << std::endl;
+    std::cin >> z;
+
+    //calculate Radius of the displayed circles on the monitor
+    double Radius = controller.calculate(z, r_soll, cam);
 
     if(cam.empty())
     {
         std::cout << "Failed to read camera parameters" << std::endl;
         return 0;
     }
+
+
 
     // capture loop
     char key = 0;
@@ -107,6 +128,23 @@ int main()
 
         //detect ellipses and save them
         centerDetector(image, det_ellipses);
+
+        //calculate centers on the monitor
+        if(Radius>190)
+        {
+//            squarePacking(Radius);//6 circles
+//            //pose estimation 6 circles
+//            estimatePosePNP(det_ellipses, cam, 0, rvec, tvec);
+
+            hexagonalPackingContinous(520);//one conic
+            //pose estimation conic
+            estimatePosePNP(det_ellipses, cam, 1, rvec, tvec);
+        }
+        else
+        {
+            hexagonalPackingContinous(Radius);
+            estimatePosePNP(det_ellipses, cam, 1, rvec, tvec);
+        }
 
 
 
