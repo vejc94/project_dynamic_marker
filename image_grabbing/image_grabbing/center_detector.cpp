@@ -12,9 +12,9 @@ void centerDetector(cv::Mat &image, std::vector<cv::RotatedRect> &det_ellipses){
     //convert image to gray scales
     cv::cvtColor(image,image_gr,CV_BGR2GRAY);
 
-    //image.convertTo(image, CV_8UC1); // gray scaled one channel image
+    image_gr.convertTo(image_gr, CV_8UC1); // gray scaled one channel image
     cv::Mat bin_image; // binarized image 0 - 255
-    cv::threshold(image, bin_image, 50, 255, cv::THRESH_BINARY);
+    cv::threshold(image_gr, bin_image, 50, 255, cv::THRESH_BINARY);
     std::vector<std::vector<cv::Point>> contours; // list of detected contours
     cv::findContours(bin_image, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
     std::sort(contours.begin(), contours.end(), contourAreaComparator);//sort contours by contour area in descending order

@@ -15,14 +15,27 @@ using namespace FlyCapture2;
 
 
 std::vector<cv::RotatedRect> det_ellipses;//list of ellipses in the image
-cv::Mat cam;//camera intrinsic parameters
+cv::Mat cam = cv::Mat::zeros(3,3, CV_32F);//camera intrinsic parameters
 
-std::string pathtoimgs = "/home/victor94/catkin_ws/src/dynamic_marker/imgs/";
-std::string pathtofile = "/home/victor94/catkin_ws/src/dynamic_marker";
+//absolut path to file
+std::string filename = "/home/victor94/project_dynamic_marker/image_grabbing/image_grabbing/camera_parameters.yaml";
 
 
-
+///In order to be able to read the file it is necessary to add the type of data
+/// the matrix has in the yaml file!! for examples "dt: f"
 void readCameraParameters(cv::Mat &cam){
+    //File reader
+    cv::FileStorage fs;
+    fs.open(filename, cv::FileStorage::READ);
+
+    //check if file is open
+    if (!fs.isOpened())
+    {
+        std::cerr << "Failed to open " << filename << std::endl;
+        return;
+    }
+    fs["camera_matrix"] >> cam ;
+    fs.release();
 
 }
 
@@ -61,6 +74,14 @@ int main()
     {
         std::cout << "Failed to start image capture" << std::endl;
         return false;
+    }
+
+    readCameraParameters(cam);
+
+    if(cam.empty())
+    {
+        std::cout << "Failed to read camera parameters" << std::endl;
+        return 0;
     }
 
     // capture loop
