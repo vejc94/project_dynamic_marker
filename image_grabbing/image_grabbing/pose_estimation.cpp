@@ -1,10 +1,31 @@
 #include "pose_estimation.h"
 #include "circlepacking.h"
 
-using namespace cv;
 
 //double pixel_pitch = 0.00018;//mi monitor
 double pixel_pitch =  0.000311;//monitor flo
+
+
+//dictionary
+cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(10));
+
+//parameters for aruco grid board 32 corners = 4x2 markers
+int markers_x = 4; //Numbers of markers in X direction
+int markers_y= 2; //Numbers of markers in Y direction
+float markers_length = 410*pixel_pitch; //markers side lenght in meter (number of pixels * pixel pitch)
+float markers_gap = 50*pixel_pitch; // Separation between two consecutive markers in the grid in meter (number of pixels * pixel pitch)
+
+//create board
+cv::Ptr<cv::aruco::GridBoard> board = cv::aruco::GridBoard::create(markers_x, markers_y, markers_length, markers_gap, dictionary);
+
+//parameter for marker detection
+std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
+cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
+std::vector<int> markerIds;
+
+using namespace cv;
+
+
 
 void estimatePosePNP(std::vector<cv::RotatedRect>& list_ell, Mat &cam, int packing, cv::Vec3d &rvec, cv::Vec3d &tvec){
     if(list_ell.empty() && (getCentersSQ().empty()||getCentersHX().empty())) return;
@@ -60,6 +81,21 @@ void estimatePosePNP(std::vector<cv::RotatedRect>& list_ell, Mat &cam, int packi
     }
 }
 
+void estimatePoseArucoBoard(cv::Mat &image,cv::Mat &cam, cv::Mat &distCoeff, cv::Vec3d &rvec, cv::Vec3d &tvec){
+
+    //detect markers
+    cv::aruco::detectMarkers(image, dictionary, markerCorners, markerIds, parameters, rejectedCandidates,cam);
+
+    //estimate Pose
+    int valid = cv::aruco::estimatePoseBoard(markerCorners, markerIds, board, cam, distCoeff, rvec, tvec);
+    if(!valid){
+        std::cout<<"did not estimate pose"<<std::endl;
+        return;
+    }
+    cv::aruco::drawAxis(image, cam, distCoeff, rvec, tvec, markers_length);
+    std::cout<< "translation vector" <<tvec << std::endl;
+    std::cout<< "rotation vector" <<rvec << std::endl;
+}
 
 ///real centers sorting function. in ascending order
 /// the point [0,0](pixels) is in the top left of the world coordinate frame.

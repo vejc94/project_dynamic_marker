@@ -2,7 +2,6 @@
 
 using namespace cv;
 
-
 int mon_rows = 1080;
 int mon_cols = 1920;
 int gap = 10;

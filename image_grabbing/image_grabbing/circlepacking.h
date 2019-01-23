@@ -12,4 +12,6 @@ std::vector<cv::Point> getCentersHX();
 std::vector<cv::Point> getCentersSQ();
 
 
+
+
 #endif // CIRCLEPACKING_H

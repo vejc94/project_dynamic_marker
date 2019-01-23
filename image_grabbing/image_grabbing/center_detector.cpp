@@ -30,6 +30,7 @@ void centerDetector(cv::Mat &image, std::vector<cv::RotatedRect> &det_ellipses){
             double area_con = cv::contourArea(contours.at(i));
             double A_ratio = area_con/area_ell;
             if((A_ratio>0.90)&&(A_ratio<1.1)){
+                cv::drawContours(image, contours, i, cv::Scalar(255,0,0), 3);
                 det_ellipses.push_back(det_ellipse);
             }
         }
