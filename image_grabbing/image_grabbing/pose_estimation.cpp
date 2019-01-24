@@ -27,9 +27,9 @@ using namespace cv;
 void estimatePosePNP(std::vector<cv::RotatedRect>& list_ell, Mat &cam, int packing, cv::Vec3d &rvec, cv::Vec3d &tvec){
     if(list_ell.empty() && (getCentersSQ().empty()||getCentersHX().empty())) return;
 
-//    //monitor parameters
-//    int mon_rows = 1080;
-//    int mon_cols = 1920;
+    //    //monitor parameters
+    //    int mon_rows = 1080;
+    //    int mon_cols = 1920;
 
     //saving centers' real position on the monitor
     std::vector<cv::Point> list_centers;

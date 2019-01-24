@@ -13,6 +13,9 @@
 
 //Others
 #include <iostream>
+#include<ctime>
+
+void writeFile(cv::Vec3d value, std::string filename);
 
 using namespace FlyCapture2;
 
@@ -142,9 +145,13 @@ int main()
         switch (marker) {
         case 'a':
             estimatePoseArucoMarker(image ,distCoeff, rvec, tvec, cam);
+            writeFile(rvec, "rotation_aruco.txt");
+            writeFile(tvec, "translation_aruco.txt");
             break;
         case 'b':
             estimatePoseArucoBoard(image, cam, distCoeff, rvec, tvec);
+            writeFile(rvec, "rotation_board.txt");
+            writeFile(tvec, "translation_board.txt");
             break;
 
         case 'c':
@@ -154,8 +161,8 @@ int main()
             //calculate centers on the monitor
             if(Radius>190)
             {
-
-                squarePacking(520);//one conic
+                Radius = 520;
+                squarePacking(Radius);//one conic
                 //pose estimation conic
                 PoseConics(det_ellipses, cam, rvec, tvec, Radius);
             }
@@ -164,6 +171,8 @@ int main()
                 hexagonalPackingContinous(Radius);
                 estimatePosePNP(det_ellipses, cam, 1, rvec, tvec);
             }
+            writeFile(rvec, "rotation_conic.txt");
+            writeFile(tvec, "translation_conic.txt");
             break;
 
         case 'x':
@@ -173,6 +182,7 @@ int main()
             //calculate centers on the monitor
             if(Radius>190)
             {
+                Radius = 270;
                 squarePacking(Radius);//6 circles
 
                 //pose estimation 6 circles
@@ -183,6 +193,8 @@ int main()
                 hexagonalPackingContinous(Radius);
                 estimatePosePNP(det_ellipses, cam, 1, rvec, tvec);
             }
+            writeFile(rvec, "rotation_6c.txt");
+            writeFile(tvec, "translation_6c.txt");
             break;
         default:
             return 0;
@@ -203,4 +215,15 @@ int main()
     camera.Disconnect();
 
     return 0;
+}
+
+void writeFile(cv::Vec3d value, std::string filename){
+
+    std::ofstream file;
+    file.open(filename, std::ios_base::app);
+    std::time_t t = std::time(0);
+
+    file << t << "," << value << std::endl;
+
+    file.close();
 }

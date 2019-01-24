@@ -17,7 +17,7 @@ double circleController::calculate(double tz, double r_soll){
 
     double kl_x = 0.00000375;//point grey camera
     //double ml_x =  0.00018;
-    double ml_x =  0.000311;//monitor flo
+    double ml_x =  0.0003114;//monitor flo
     double f = 1924.5961*kl_x;//f_x = 1925 in pixel units. from camera file.
 
     double R = (r_soll*kl_x*tz)/(f*ml_x);
