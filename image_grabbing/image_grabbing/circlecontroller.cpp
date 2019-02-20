@@ -6,17 +6,17 @@ min_=min; //minimal size
 }
 
 double circleController::calculate(double tz, double r_soll, cv::Mat cam){
-    ///r_soll (radius in the image plane in pixels)
+    /// r_soll (radius in the image plane in pixels)
     /// tz = Z coordinate in camera frame (estimated)
-    ///kl_x = 3.7 µm (length pixel of the camera)
+    /// kl_x = 3.7 µm (length pixel of the camera)
     /// f = 0.005 m (focal length)
-    /// ml_x =180 µm (length pixel of the monitor)
+    /// ml_x = 180 µm (length pixel of the monitor)
     /// R (radius of the displayed circle in pixels)
 
     double kl_x = 0.00000375;//point grey camera
     //double ml_x =  0.00018;//mi monitor
 
-    float f = cam.at<float>(0,0)*kl_x;
+    double f = 1830.770849*kl_x;//(double)cam.at<float>(0,0)*kl_x;
 
     double R = (r_soll*kl_x*tz)/(f*pixel_pitch);
     if(R>max_){

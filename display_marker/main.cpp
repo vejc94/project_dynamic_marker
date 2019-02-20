@@ -19,7 +19,7 @@ using namespace cv;
 
 int mon_rows = 1080;
 int mon_cols = 1920;
-int gap = 10;
+int gap = 20;
 std::vector<Point> centers_sq;
 std::vector<Point> centers_hx;
 std::vector<Point> centers_hx_real;
@@ -69,17 +69,19 @@ int main(int argc, char **argv)
     window.setFormat(format);
     window.resize(window.window_width, window.window_height);
     window.showFullScreen();
+    window.setPosition(1920, 0);
     //window.show();
 
-    ///varying size marker
-    circleController controller(520,5);
-    ///fixed marker
+
+    // fixed marker
     //circleController controller(110,110);
 
+    // parameters to show the dynamic marker. Max, Min radius and distance
+    circleController controller(520,5);
     std::cout<< "give distance z"<< std::endl;
     std::cin >> z;
     Radius = controller.calculate(z,r_soll);
-    std::cout << "actual radius" << Radius << std::endl;
+    std::cout << "actual radius: " << Radius << std::endl;
 
     /// app.exec() launches the event loop, loop that waits for user input in gui application
     /// the event loop is running and waiting for events.
@@ -96,46 +98,48 @@ void ImageDisplayWindow::initialize()
 }
 
 
-void ImageDisplayWindow::drawAruco(){
+
+/// Draws Aruco images for further rendering
+//void ImageDisplayWindow::drawAruco(){
 
 //    cv::Mat marker_image;
 
-//    //Marker dictionary
+////   //Marker dictionary
 //    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(10));
 
-//    //draw one marker
-//    cv::aruco::drawMarker(dictionary, 23, 1000, marker_image, 1);
-//    cv::imwrite("aruco_marker.png", marker_image);
+////    //draw one marker
+//    //cv::aruco::drawMarker(dictionary, 23, 1000, marker_image, 1);
+//    //cv::imwrite("aruco_marker.png", marker_image);
 
-    //create board
-    //parameters for aruco grid board 32 corners = 4x2 markers
-    //    int markers_x = 4; //Numbers of markers in X direction
-    //    int markers_y= 2; //Numbers of markers in Y direction
-    //    float markers_length = 410*0.000375; //markers side lenght in meter (number of pixels * pixel pitch)
-    //    float markers_gap = 50*0.000375; // Separation between two consecutive markers in the grid in meter (number of pixels * pixel pitch)
-    //    cv::Ptr<cv::aruco::GridBoard> board = cv::aruco::GridBoard::create(markers_x, markers_y, markers_length, markers_gap, dictionary);
+//    //create board
+//    //parameters for aruco grid board 32 corners = 4x2 markers
+//        int markers_x = 4; //Numbers of markers in X direction
+//        int markers_y= 2; //Numbers of markers in Y direction
+//        float markers_length = 410*0.000283; //markers side lenght in meter (number of pixels * pixel pitch)
+//        float markers_gap = 50*0.000283; // Separation between two consecutive markers in the grid in meter (number of pixels * pixel pitch)
+//        cv::Ptr<cv::aruco::GridBoard> board = cv::aruco::GridBoard::create(markers_x, markers_y, markers_length, markers_gap, dictionary);
 
-    //    //image for marker board
-    //    board->draw(cv::Size(1920,1080), marker_image, 50 , 1);
-    //    cv::imwrite("aruco_board.png", marker_image);
+////        //image for marker board
+//        board->draw(cv::Size(1790,870), marker_image, 0 , 1);
+//        cv::imwrite("aruco_board.png", marker_image);
 
-    //QImage q_image = QImage(QString::fromStdString("aruco_board.png"));
-    QImage q_image = QImage(QString::fromStdString("aruco_marker.png"));
-    q_image.bits();
-
-
-    texture = new QOpenGLTexture(q_image.mirrored());
-    texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
-    texture->setMagnificationFilter(QOpenGLTexture::Linear);
-}
+//    QImage q_image = QImage(QString::fromStdString("aruco_board.png"));
+//    //QImage q_image = QImage(QString::fromStdString("aruco_marker.png"));
+//    q_image.bits();
 
 
-void drawCircle(float x, float y, float radius, float r, float g, float b)
+//    texture = new QOpenGLTexture(q_image.mirrored());
+//    texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
+//    texture->setMagnificationFilter(QOpenGLTexture::Linear);
+//}
+
+/// Renders circles
+void drawCircle(double x, double y, double radius, float r, float g, float b)
 {
-    float theta;
+    double theta;
     glColor3f(r,g,b);
     glBegin(GL_POLYGON);
-    for(float i=0; i<360; i=i+0.1){
+    for(double i=0; i<360; i=i+0.1){
         theta = i*3.1416/180;
         glVertex2f(x + radius*cos(theta), y + radius*sin(theta));
     }
@@ -143,10 +147,8 @@ void drawCircle(float x, float y, float radius, float r, float g, float b)
     glFlush();
 }
 
-/*
- * With this render function the aruco marker and the aruco board are displayed!
-*/
 
+/// With this render function the aruco marker and the aruco board are displayed!
 //void ImageDisplayWindow::render(){
 //    glViewport(0,0,1920,1080);
 //    glClearColor(1,1,1,1);
@@ -167,31 +169,31 @@ void drawCircle(float x, float y, float radius, float r, float g, float b)
 //    glViewport(0, 0, width(), height());
 //    glMatrixMode(GL_MODELVIEW);
 //    glLoadIdentity();
+//    glOrtho(0.0f, 1920, 0.0, 1080, -1.0f, 1.0f);
 
 //    //for rendering one marker
-//    glOrtho(0.0f, 1920, 0.0, 1080, -1.0f, 1.0f);
-//    glBegin(GL_QUADS);
-//          glTexCoord2f(0,0);
-//          glVertex2f(380, 40);
-//          glTexCoord2f(1,0);
-//          glVertex2f(1460, 40);
-//          glTexCoord2f(1,1);
-//          glVertex2f(1460, 1040);
-//          glTexCoord2f(0,1);
-//          glVertex2f(380, 1040);
-//     glEnd();
+////    glBegin(GL_QUADS);
+////          glTexCoord2f(0,0);
+////          glVertex2f(460, 40);
+////          glTexCoord2f(1,0);
+////          glVertex2f(1460, 40);
+////          glTexCoord2f(1,1);
+////          glVertex2f(1460, 1040);
+////          glTexCoord2f(0,1);
+////          glVertex2f(460, 1040);
+////     glEnd();
 
 //    //for rendering a board
-////    glBegin(GL_QUADS);
-////    glTexCoord2f(0,0);
-////          glVertex2f(-1.0f, -1.0f);
-////          glTexCoord2f(1,0);
-////          glVertex2f(1.0f, -1.0f);
-////          glTexCoord2f(1,1);
-////          glVertex2f(1.0f, 1.0f);
-////          glTexCoord2f(0,1);
-////    glVertex2f(-1.0f, 1.0f);
-////    glEnd();
+//    glBegin(GL_QUADS);
+//          glTexCoord2f(0,0);
+//          glVertex2f(65, 105);
+//          glTexCoord2f(1,0);
+//          glVertex2f(1855, 105);
+//          glTexCoord2f(1,1);
+//          glVertex2f(1855, 975);
+//          glTexCoord2f(0,1);
+//          glVertex2f(65, 975);
+//    glEnd();
 
 //    glPopMatrix();
 //      glMatrixMode(GL_PROJECTION);
@@ -199,13 +201,13 @@ void drawCircle(float x, float y, float radius, float r, float g, float b)
 //      glMatrixMode(GL_MODELVIEW);
 
 //    glDisable(GL_TEXTURE_2D);
+
 //}
 
-/*
- * With this render function the circles are displayed!
-*/
+
+/// With this render function the circles are displayed!
 void ImageDisplayWindow::render(){
-    //glClearColor(0,0,0,1);
+    //glClearColor(1,1,1,1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     //Projectionstransformation
@@ -221,12 +223,9 @@ void ImageDisplayWindow::render(){
 
 
     // Here you draw the circles
-
-    //     hexagonalPackingContinous(Radius);
-
     if(Radius > 190){//190 is the maximal radius to display a hexagon
         //squarePacking(270);//Radius = 270 to display 6 circles
-        squarePacking(520);//one conic
+        hexagonalPackingContinous(520);//one conic
     }
     else hexagonalPackingContinous(Radius);
 
@@ -338,7 +337,7 @@ void hexagonalPackingContinous(double radius){
     centers_hx.clear();
     centers_hx=centers_hx_real;
     for(uint i = 0; i < centers_hx.size(); i++){
-        drawCircle(centers_hx.at(i).x, centers_hx.at(i).y, radius-gap, 255,255,255);
+        drawCircle(centers_hx.at(i).x, centers_hx.at(i).y, radius - gap, 255, 255, 255);
     }
 
 }
@@ -373,10 +372,10 @@ void squarePacking(double radius){
     ///draw circles
     for(uint i = 0; i < centers_sq.size(); i++){// columns
         if((n==1)&&(m==1)){
-            drawCircle(mon_cols/2,mon_rows/2,radius-gap, 255,255,255);
+            drawCircle(mon_cols/2,mon_rows/2,radius-2*gap, 0, 0, 0);
         }
         else{
-            drawCircle(centers_sq.at(i).x, centers_sq.at(i).y, radius-gap, 255,255,255);//-10 para dar espacio entre circulos
+            drawCircle(centers_sq.at(i).x, centers_sq.at(i).y, radius - 2 * gap, 255, 255, 255);//-10 para dar espacio entre circulos
         }
     }
 }

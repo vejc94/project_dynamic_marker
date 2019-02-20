@@ -1,0 +1,4 @@
+#ifndef CIRCLEPACKING_H
+#define CIRCLEPACKING_H
+
+#endif // CIRCLEPACKING_H

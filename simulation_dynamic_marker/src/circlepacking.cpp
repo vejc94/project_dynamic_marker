@@ -2,9 +2,7 @@
 
 using namespace cv;
 
-int mon_rows = 1080;
-int mon_cols = 1920;
-int gap = 10;
+
 std::vector<Point> centers_sq;
 std::vector<Point> centers_hx;
 std::vector<Point> centers_hx_real;
@@ -34,10 +32,10 @@ void squarePacking(Mat image, double radius){
     ///draw circles
     for(uint i = 0; i < centers_sq.size(); i++){// columns
         if((n==1)&&(m==1)){
-            circle(image, Point(mon_cols/2,mon_rows/2),radius - 30,Scalar(255,255,255),-1);
+            circle(image, Point(mon_cols/2,mon_rows/2),radius -40,Scalar(255, 255, 255),-1);
         }
         else{
-            circle(image, centers_sq.at(i), (int)radius-30, Scalar(255,255,255), -1);//-10 para dar espacio entre circulos
+            circle(image, centers_sq.at(i), (int)radius-gap-40, Scalar(255, 255, 255), -1);//-10 para dar espacio entre circulos
 
 
         }
@@ -213,12 +211,12 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
 
     double t; // parameter for curve
 
-    //scaling factor lamda;
-    for(int lamda = 1;lamda<b;lamda++){
-        for(t=0;t<radius;t=t+radius/lamda){
+    //scaling factor lambda;
+    for(int lambda = 1;lambda<b;lambda++){
+        for(t=0;t<radius;t=t+radius/lambda){
             //first curve [R + t, sqrt(3)*(t - R)];
-            double x1 = lamda*(radius + t) + mon_cols/2;
-            double y1 = lamda*(sqrt(3)*(t - radius)) + mon_rows/2;
+            double x1 = lambda*(radius + t) + mon_cols/2;
+            double y1 = lambda*(sqrt(3)*(t - radius)) + mon_rows/2;
 
 
             //pushing points
@@ -232,12 +230,12 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
             centers_hx.push_back(Point(x1_m,y1));
         }
     }
-    //scaling factor lamda;
-    for(int lamda = 1;lamda<b;lamda++){
-        for(t=0;t<=radius;t=t+radius/lamda){
+    //scaling factor lambda;
+    for(int lambda = 1;lambda<b;lambda++){
+        for(t=0;t<=radius;t=t+radius/lambda){
             //second curve [2R - t, sqrt(3)*t];
-            double x2 = lamda*(2*radius - t) + mon_cols/2;
-            double y2 = lamda*(sqrt(3))*(t) + mon_rows/2;
+            double x2 = lambda*(2*radius - t) + mon_cols/2;
+            double y2 = lambda*(sqrt(3))*(t) + mon_rows/2;
             //mirrored point
             double x2_m = mon_cols - x2;
 
@@ -251,12 +249,12 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
         }
     }
 
-    //scaling factor lamda;
-    for(int lamda = 2;lamda<b;lamda++){
-        for(t=2*radius/lamda;t<2*radius;t=t+2*radius/lamda){
+    //scaling factor lambda;
+    for(int lambda = 2;lambda<b;lambda++){
+        for(t=2*radius/lambda;t<2*radius;t=t+2*radius/lambda){
            //third curve [ R - t, sqrt(3)*R];
-            double x3 = lamda*(radius - t) + mon_cols/2;
-            double y3 = lamda*(sqrt(3)*radius) + mon_rows/2;
+            double x3 = lambda*(radius - t) + mon_cols/2;
+            double y3 = lambda*(sqrt(3)*radius) + mon_rows/2;
             //mirrored points;
             //double x3_m = mon_cols - x3;
             double y3_m = mon_rows - y3;
@@ -302,8 +300,12 @@ void hexagonalPackingContinous(cv::Mat image, double radius){
     centers_hx.clear();
     centers_hx=centers_hx_real;
     for(uint i = 0; i < centers_hx.size(); i++){       
-        circle(image,centers_hx.at(i), radius-gap, Scalar(255,255,255), -1);
+        circle(image,centers_hx.at(i), radius-gap, Scalar(255, 255, 255), -1);
 
+    }
+    if(centers_hx.size()==1){
+        circle(image,centers_hx.at(0), radius/1.5 - gap, Scalar(0, 0, 0), -1);
+        circle(image,centers_hx.at(0), radius/3.5 - gap, Scalar(255, 255, 255), -1);
     }
 
 }
