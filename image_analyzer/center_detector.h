@@ -1,4 +1,0 @@
-#ifndef CENTER_DETECTOR_H
-#define CENTER_DETECTOR_H
-
-#endif // CENTER_DETECTOR_H
